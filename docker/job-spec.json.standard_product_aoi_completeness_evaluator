@@ -1,0 +1,25 @@
+{
+  "command":"/home/ops/verdi/ops/standard_product_completeness_evaluator/evaluate.py",
+  "imported_worker_files": {
+    "/home/ops/.netrc": "/home/ops/.netrc",
+    "/home/ops/.aws": "/home/ops/.aws"
+  },
+  "disk_usage":"2GB",
+  "recommended-queues": ["factotum-job_worker-large"],
+  "soft_time_limit": 2000,
+  "time_limit": 2800,
+  "params" : [
+  {
+    "name": "aoi_index",
+    "destination": "context"
+  },
+  {
+    "name": "aoi_id",
+    "destination": "context"
+  }
+  {
+    "name": "track_number",
+    "destination": "context"
+  }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+    "label": "Standard Product S1-GUNW - s1_gunw_completeness_evaluator",
+    "submission_type": "individual",
+    "enable_dedup": false,
+    "params" : [
+    {
+      "name": "aoi_id",
+      "from": "submitter",
+      "type": "text"
+    },
+    {
+      "name": "track_number",
+      "from": "dataset_jpath:_source.metadata.track_number"
+    }
+    ]
+}
