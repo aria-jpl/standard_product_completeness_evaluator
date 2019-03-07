@@ -69,11 +69,11 @@ def main():
 
             # for each complete s1-gunw orbit, generate a product
             for orbit in completed_gunws.keys():
-                build_validated_product.build(completed_gunws.get(orbit), version, 'S1-GUNW-AOI_TRACK_COMPLETE', aoi, track, orbit)
+                build_validated_product.build(completed_gunws.get(orbit), version, 'S1-GUNW-AOI_TRACK', aoi, track, orbit)
 
             # for each complete s1-gunw-merged, generate a product
             for orbit in completed_merged_gunws.keys():
-                build_validated_product.build(completed_merged_gunws.get(orbit), version, 'S1-GUNW-MERGED-AOI_TRACK_COMPLETE', aoi, track, orbit)
+                build_validated_product.build(completed_merged_gunws.get(orbit), version, 'S1-GUNW-MERGED-AOI_TRACK', aoi, track, orbit)
 
 def determine_complete_orbits(acq_list_dict, gunw_list, completed_list):
     '''determine which orbit date pair gunw objects are complete, and not in the completed list. Returns those gunw objects as a dict of lists where the key is orbit pair'''

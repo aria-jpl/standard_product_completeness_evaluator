@@ -1,0 +1,19 @@
+    {
+
+      "ipath": "ariamh::data/s1-gunw-aoi-track",
+      "match_pattern": "/(?P<id>S1-GUNW-AOI_TRACK.*)$",
+      "alt_match_pattern": null,
+      "extractor": null,
+      "level": "l1",
+      "type": "ancillary"
+    },
+    {
+
+      "ipath": "ariamh::data/s1-gunw-merged-aoi-track",
+      "match_pattern": "/(?P<id>S1-GUNW-MERGED-AOI_TRACK.*)$",
+      "alt_match_pattern": null,
+      "extractor": null,
+      "level": "l1",
+      "type": "ancillary"
+    },
+
