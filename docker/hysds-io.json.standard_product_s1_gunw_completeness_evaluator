@@ -1,6 +1,6 @@
 {
     "label": "Standard Product S1-GUNW - s1_gunw_completeness_evaluator",
-    "submission_type": "individual",
+    "submission_type": "iteration",
     "enable_dedup": false,
     "params" : [
     {
