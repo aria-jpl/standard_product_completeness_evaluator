@@ -12,7 +12,7 @@
   {
     "name": "aoi_id",
     "destination": "context"
-  }
+  },
   {
     "name": "track_number",
     "destination": "context"
