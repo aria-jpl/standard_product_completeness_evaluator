@@ -188,7 +188,7 @@ def get_objects(object_type, aoi, track_number):
     '''returns all objects of the object type that intersect both
     temporally and spatially with the aoi'''
     #determine index
-    idx_dct = {'acq-list': 'grq_*_acq-list', 'ifg':'grq_*_s1-gunw', 'ifg-cfg':'grq_*_s1-gunw-ifg-cfg', 'ifg-merged': 'grq_*_s1-gunw-merged', 'ifg-completed': 'grq_*_s1-gunw-aoi-track', 'ifg-merged-completed': 'grq_*_s1-gunw-merged-aoi-track'}
+    idx_dct = {'acq-list': 'grq_*_s1-gunw-acq-list', 'ifg':'grq_*_s1-gunw', 'ifg-cfg':'grq_*_s1-gunw-ifg-cfg', 'ifg-merged': 'grq_*_s1-gunw-merged', 'ifg-completed': 'grq_*_s1-gunw-aoi-track', 'ifg-merged-completed': 'grq_*_s1-gunw-merged-aoi-track'}
     idx = idx_dct.get(object_type)
     starttime = aoi.get('_source', {}).get('starttime')
     endtime = aoi.get('_source', {}).get('endtime')
