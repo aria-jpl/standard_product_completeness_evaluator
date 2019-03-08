@@ -29,7 +29,7 @@ def build(ifg_list, version, product_prefix, aoi, track, orbit):
     #print('    master_scenes:  {0}'.format(met['master_scenes']))
     #print('    slave_scenes:   {0}'.format(met['slave_scenes']))
     build_product_dir(ds, met)
-    submit_product(ds)
+    #submit_product(ds)
 
 def build_id(version, product_prefix, aoi, track, orbit, date_pair):
     '''builds the product uid'''
