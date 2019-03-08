@@ -44,15 +44,12 @@ def gen_hash(es_object):
 
 def get_times(ifg_list, minimum=True):
     '''returns the minimum or the maximum start/end time'''
-    key = 'endtime'
-    if minimum:
-        key = 'starttime'
-    times = [dateutil.parser.parse(x.get('_source').get(key)) for x in ifg_list]
+    times = [dateutil.parser.parse(x.get('_source').get('metadata').get('primary_date')) for x in ifg_list] + [dateutil.parser.parse(x.get('_source').get('metadata').get('reference_date')) for x in ifg_list]
     if minimum:
         time = min(times)
     else:
         time = max(times)
-    return time.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return time.strftime('%Y-%m-%dT00:00:00.000Z')
 
 def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Generates the ds dict'''
@@ -92,7 +89,7 @@ def build_met(ifg_list, version, product_prefix, aoi, track, orbit):
         dct = {'id': ifg_id, 'master_slcs':master_slcs, 'slave_slcs':slave_slcs, 'master_scenes': master_scenes,
                'slave_scenes':slave_scenes, 'master_orbit_file':master_orbit_file, 'slave_orbit_file': slave_orbit_file}
         s1_gunws.append(dct)
-    met = {'track': track, 'aoi': aoi, 'date_pair': date_pair, 'orbit': orbits, 's1-gunw-ids': s1_gunw_ids, 's1-gunws': s1_gunws}
+    met = {'track_number': track, 'aoi': aoi.get('_id'), 'date_pair': date_pair, 'orbit': orbits, 's1-gunw-ids': s1_gunw_ids, 's1-gunws': s1_gunws}
     return met
 
 def get_location(ifg_list):
