@@ -21,19 +21,19 @@ def build(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Builds and submits a aoi-track product.'''
     ds = build_dataset(ifg_list, version, product_prefix, aoi, track, orbit)
     met = build_met(ifg_list, version, product_prefix, aoi, track, orbit)
-    build_product_dir(ds, met)
-    submit_product(ds)
     print('Publishing Product: {0}'.format(ds['label']))
     print('    version:        {0}'.format(ds['version']))
     print('    starttime:      {0}'.format(ds['starttime']))
     print('    endtime:        {0}'.format(ds['endtime']))
     print('    location:       {0}'.format(ds['location']))
-    print('    master_scenes:  {0}'.format(met['master_scenes']))
-    print('    slave_scenes:   {0}'.format(met['slave_scenes']))
+    #print('    master_scenes:  {0}'.format(met['master_scenes']))
+    #print('    slave_scenes:   {0}'.format(met['slave_scenes']))
+    build_product_dir(ds, met)
+    submit_product(ds)
 
 def build_id(version, product_prefix, aoi, track, orbit, date_pair):
     '''builds the product uid'''
-    uid = '{}-{}-T{}-{}-{}'.format(product_prefix, aoi, str(track).zfill(3), date_pair, version)
+    uid = '{}-{}-T{}-{}-{}'.format(product_prefix, aoi.get('_id', 'AOI'), str(track).zfill(3), date_pair, version)
     return uid
 
 def gen_hash(es_object):
@@ -60,6 +60,7 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     endtime = get_times(ifg_list, minimum = False)
     date_pair = '{}_{}'.format(starttime[:10].replace('-', ''), endtime[:10].replace('-',''))    
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
+    print('uid: {}'.format(uid))
     location = get_location(ifg_list)
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
     return ds
@@ -72,7 +73,7 @@ def build_met(ifg_list, version, product_prefix, aoi, track, orbit):
     gunw_list = [x.get('_id') for x in ifg_list]
     orbits = set()
     for x in ifg_list:    
-        orbits.update(x.get('_source').get('metadata').get('orbit'))
+        orbits.update(x.get('_source').get('metadata').get('orbit_number'))
     orbits = list(orbits)
     s1_gunw_ids = []
     s1_gunws = []
