@@ -44,7 +44,7 @@ def gen_hash(es_object):
 
 def get_times(ifg_list, minimum=True):
     '''returns the minimum or the maximum start/end time'''
-    times = [dateutil.parser.parse(x.get('_source').get('metadata').get('primary_date')) for x in ifg_list] + [dateutil.parser.parse(x.get('_source').get('metadata').get('reference_date')) for x in ifg_list]
+    times = [dateutil.parser.parse(x.get('_source').get('metadata').get('secondary_date')) for x in ifg_list] + [dateutil.parser.parse(x.get('_source').get('metadata').get('reference_date')) for x in ifg_list]
     if minimum:
         time = min(times)
     else:
