@@ -31,7 +31,7 @@ def main():
     aoi_id = ctx['aoi_id']
     # get the metadata for the aoi
     aoi = get_aoi(aoi_id, aoi_index)
-
+    aoi_tracks = aoi.get('_source', {}).get('metadata', {}).get('track_number', False) # list of tracks
     # get all acq-lists that are covered by the aoi & track
     acq_list_dct = sort_by_track(get_objects('acq-list', aoi, track_number))
 
@@ -48,7 +48,10 @@ def main():
     ifg_merged_completed_dct = sort_by_track_and_version(get_objects('ifg-merged-completed', aoi, track_number))
 
     # get a list of all possible tracks
-    all_tracks = get_all_tracks([ifg_dct, ifg_merged_dct])
+    if track_number is False and aoi_tracks:
+        all_tracks = [int(x) for x in aoi_tracks]
+    else:
+        all_tracks = get_all_tracks([acq_list_dct])
     print('all tracks: {}'.format(all_tracks))    
 
     for track in all_tracks:
