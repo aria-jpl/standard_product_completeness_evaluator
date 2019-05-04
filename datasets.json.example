@@ -8,7 +8,7 @@
     },
     {
 
-      "ipath": "ariamh::data/s1-gunw-merged-aoi-track",
+      "ipath": "ariamh::data/S1-GUNW-MERGED-AOI_TRACK",
       "match_pattern": "/(?P<id>S1-GUNW-MERGED-AOI_TRACK.*)$",
       "alt_match_pattern": null,
       "extractor": null,

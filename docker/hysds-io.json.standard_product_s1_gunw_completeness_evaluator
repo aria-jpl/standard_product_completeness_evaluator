@@ -1,5 +1,5 @@
 {
-    "label": "Standard Product S1-GUNW - S1-GUNW Evaluate Completeness",
+    "label": "Standard Product S1-GUNW - S1-GUNW Completeness Evaluator",
     "submission_type": "iteration",
     "enable_dedup": false,
     "params" : [
