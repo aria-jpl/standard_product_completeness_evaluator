@@ -156,8 +156,10 @@ class evaluate():
                 if gunws[0].get('_type', False) == 'S1-GUNW':
                     print('tagging acq-lists appropriately')
                     for obj in complete_acq_lists:
+                        self.remove_obj_tag(obj, 'gunw_missing')
                         self.tag_obj(obj, 'gunw_generated')
                     for obj in incomplete_acq_lists:
+                        self.remove_obj_tag(obj, 'gunw_generated')
                         self.tag_obj(obj, 'gunw_missing')
                 # they are complete. tag & generate products
                 if complete:
@@ -190,6 +192,13 @@ class evaluate():
         prod_type = obj.get('_type')
         index = obj.get('_index')
         tagger.add_tag(index, uid, prod_type, tag)
+
+    def remove_obj_tag(self, obj, tag):
+        '''removes the tag from the given object'''
+        uid = obj.get('_source').get('id')
+        prod_type = obj.get('_type')
+        index = obj.get('_index')
+        tagger.remove_tag(index, uid, prod_type, tag)
 
     def get_matching_acq_lists(self, aoi, audit_trail_list):
         '''returns all acquisition lists matching the audit trail products under the given aoi'''

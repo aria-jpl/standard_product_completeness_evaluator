@@ -28,6 +28,26 @@ def add_tag(index, uid, prod_type, tag):
     response.raise_for_status()
     print('successfully updated {} with tag {}'.format(uid, tag))
 
+def remove_tag(index, uid, prod_type, tag):
+    '''removes the tag from the product'''
+    if tag is False:
+        return
+    else:
+        existing_tags = get_current_tags(uid, prod_type, index)
+        if not tag in existing_tags:
+            print('tag: {} does not exist in tags for: {}'.format(tag, uid))
+            return
+        tag_list = tag.split(',')
+        if not type(existing_tags) is list:
+            existing_tags = []
+        existing_tags.remove(tag)
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
+    grq_url = '{0}/es/{1}/{2}/{3}/_update'.format(grq_ip, index, prod_type, uid)
+    es_query = {"doc" : {"metadata": {"tags" : existing_tags}}}
+    response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
+    response.raise_for_status()
+    print('successfully removed tag {} from {}'.format(tag, uid))
+
 def get_current_tags(uid, prod_type, index):
     '''gets the current tags of the object'''
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
