@@ -10,11 +10,31 @@
   "time_limit": 2800,
   "params" : [
   {
-    "name": "aoi_id",
+    "name": "uid",
+    "destination": "context"
+  },
+  {
+    "name": "full_id_hash",
     "destination": "context"
   },
   {
     "name": "track_number",
+    "destination": "context"
+  },
+  {
+    "name": "orbit_number",
+    "destination": "context"
+  },
+  {
+    "name": "prod_type",
+    "destination": "context"
+  },
+  {
+    "name": "version",
+    "destination": "context"
+  },
+  {
+    "name": "orbit_number",
     "destination": "context"
   }
   ]

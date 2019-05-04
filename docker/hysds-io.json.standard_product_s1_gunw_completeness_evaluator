@@ -1,16 +1,32 @@
 {
-    "label": "Standard Product S1-GUNW - s1_gunw_completeness_evaluator",
+    "label": "Standard Product S1-GUNW - S1-GUNW Evaluate Completeness",
     "submission_type": "iteration",
     "enable_dedup": false,
     "params" : [
     {
-      "name": "aoi_id",
-      "from": "submitter",
-      "type": "text"
+      "name": "uid",
+      "from": "dataset_jpath:_id"
+    },
+    {
+      "name": "prod_type",
+      "from": "dataset_jpath:_type"
     },
     {
       "name": "track_number",
       "from": "dataset_jpath:_source.metadata.track_number"
+    },
+    {
+      "name": "full_id_hash",
+      "from": "dataset_jpath:_source.metadata"
+      "lambda": "lambda x: x.get('full_id_hash', False)"
+    },
+    {
+      "name": "version",
+      "from": "dataset_jpath:_version"
+    },
+    {
+      "name": "orbit_number",
+      "from": "dataset_jpath:_source.metadata.orbit_number"
     }
     ]
 }

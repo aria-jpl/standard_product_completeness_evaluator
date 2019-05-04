@@ -10,15 +10,27 @@
   "time_limit": 2800,
   "params" : [
   {
-    "name": "aoi_index",
+    "name": "iud",
     "destination": "context"
   },
   {
-    "name": "aoi_id",
+    "name": "prod_type",
     "destination": "context"
   },
   {
-    "name": "track_number",
+    "name": "location",
+    "destination": "context"
+  },
+  {
+    "name": "starttime",
+    "destination": "context"
+  },
+  {
+    "name": "endtime",
+    "destination": "context"
+  },
+  {
+    "name": "version",
     "destination": "context"
   }
   ]

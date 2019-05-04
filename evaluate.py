@@ -1,210 +1,185 @@
 #!/usr/bin/env python
 
 '''
-For a given input AOI and optional track, looks for completed s1-gunw date pairs
- along track. If all s1-gunws are complete, it publishes a validated product.
+Input are either an AOI or a GUNW/GUNW-merged. For a given input product, determines which GUNWs/GUNW merged
+are complete along track over the AOI (or, if a GUNW, any AOIs). If there are complete
+products, it tags the product with <aoi_name> tag, and creates an AOI_TRACK product
+for all GUNWs along that track/orbit pairing. 
 '''
 
 from __future__ import print_function
 import re
 import json
-import pickle
 import hashlib
 import requests
+import warnings
 from hysds.celery import app
+import tagger
 import build_validated_product
 
-def main():
-    '''
-    Main Loop
-    '''
-    ctx = load_context()
-    track_number = ctx.get('track_number', False)
-    if track_number is not False:
-        try:
-            track_number = int(track_number)
-        except:
-            track_number = False
-    aoi_index = ctx.get('aoi_index', False)
-    if not aoi_index:
-        aoi_index = 'grq_*_area_of_interest'
-    aoi_id = ctx['aoi_id']
-    # get the metadata for the aoi
-    aoi = get_aoi(aoi_id, aoi_index)
-    aoi_tracks = aoi.get('_source', {}).get('metadata', {}).get('track_number', False) # list of tracks
-    # get all acq-lists that are covered by the aoi & track
-    acq_list_dct = sort_by_track(get_objects('acq-list', aoi, track_number))
+AOI_TRACK_PREFIX = 'S1-GUNW-AOI_TRACK'
+AOI_TRACK_VERSION = 'v2.0'
+ALLOWED_PROD_TYPES = ['S1-GUNW', "S1-GUNW-MERGED", "area_of_interest"]
+INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
+                 'S1-GUNW':'grq_*_s1-gunw',
+                 'S1-GUNW-MERGED': 'grq_*_s1-*-merged',
+                 'S1-GUNW-acqlist-audit_trail': 'grq_*_s1-gunw-acqlist-audit_trail',
+                 'S1-GUNW-completed': 'grq_*_s1-gunw-aoi_track',
+                 'S1-GUNW-merged-completed': 'grq_*_s1-gunw-merged-aoi_track',
+                 'area_of_interest': 'grq_*_area_of_interest'}
 
-    # get all s1-gunw products covered
-    ifg_dct = sort_by_track_and_version(get_objects('ifg', aoi, track_number))
-
-    # get all s1-gunw merged products covered
-    ifg_merged_dct = sort_by_track_and_version(get_objects('ifg-merged', aoi, track_number))
-    
-    # get all s1-gunw-completed products covered
-    ifg_completed_dct = sort_by_track_and_version(get_objects('ifg-completed', aoi, track_number))
-
-    # get all s1-gunw-merged completed products covered
-    ifg_merged_completed_dct = sort_by_track_and_version(get_objects('ifg-merged-completed', aoi, track_number))
-
-    # get a list of all possible tracks
-    if track_number is False and aoi_tracks:
-        all_tracks = [int(x) for x in aoi_tracks]
-    else:
-        all_tracks = get_all_tracks([acq_list_dct])
-    print('all tracks: {}'.format(all_tracks))    
-
-    for track in all_tracks:
-        print('for track {}'.format(track))
-        acq_list = acq_list_dct.get(track, [])
-        print('found {} acquisition lists'.format(len(acq_list)))
-        acq_dct = sort_by_orbit(acq_list) #sorts the acquisition list by orbit pair
-        ifgs = ifg_dct.get(track, {})
-        ifg_merged = ifg_merged_dct.get(track, {})
-        ifg_completed = ifg_completed_dct.get(track, {})
-        ifg_merged_completed = ifg_merged_completed_dct.get(track, {})
-
-        print('total acqs: {}'.format(len(acq_list)))
-        # for each version
-        versions = ifgs.keys()
-        print('versions found for track {}: {}'.format(track, versions))
-        for version in versions:
-            print('for version {}...'.format(version))
-            print('ifgs: {}'.format(len(ifgs.get(version, []))))
-            # determine which s1-gunws are complete and are not published as completed
-            completed_gunws = determine_complete_orbits(acq_dct, ifgs.get(version, []), ifg_completed.get(version, []))
-            print('found {} completed ifgs'.format(len(completed_gunws)))
-            # determine which s1-gunw-merged are complete and not published as completed
-            completed_merged_gunws = determine_complete_orbits(acq_dct, ifg_merged.get(version, []), ifg_merged_completed.get(version, []))
-
-            # for each complete s1-gunw orbit, generate a product
-            for orbit in completed_gunws.keys():
-
-                build_validated_product.build(completed_gunws.get(orbit), version, 'S1-GUNW-AOI_TRACK', aoi, track, orbit)
-
-            # for each complete s1-gunw-merged, generate a product
-            for orbit in completed_merged_gunws.keys():
-                build_validated_product.build(completed_merged_gunws.get(orbit), version, 'S1-GUNW-MERGED-AOI_TRACK', aoi, track, orbit)
-
-def determine_complete_orbits(acq_list_dict, gunw_list, completed_list):
-    '''determine which orbit date pair gunw objects are complete, and not in the completed list. Returns those gunw objects as a dict of lists where the key is orbit pair'''
-    completed_gunws = {}
-    orbit_gunw_list = sort_by_orbit(gunw_list)
-    completed_hashed_dict = build_hashed_dict(completed_list)
-    print('found {} hashes from the completed s1-gunw dict'.format(len(completed_hashed_dict)))
-    for orbit in orbit_gunw_list.keys():
-        print('for orbit {}...'.format(orbit))
-        acq_list_objects = acq_list_dict.get(orbit, []) # get the acquisition lists for the given orbit pair
-        print('found {} acq-lists for orbit {}'.format(len(acq_list_objects), orbit))
-        acq_list_hashed_dict = build_hashed_dict(acq_list_objects) # generates a hashed dict of the naster/slave set for the given orbit pair
-        gunw_list = orbit_gunw_list.get(orbit, [])
-        print('found {} gunw products for orbit {}'.format(len(gunw_list), orbit))
-        gunw_hashed_dict = build_hashed_dict(gunw_list) # generates a hashed dict of the known ifgs
-        # determine if the gunws are complete
-        complete = True
-        for key in acq_list_hashed_dict.keys():
-            if gunw_hashed_dict.get(key, False) is False:
-                print('acquisition: {} is missing.'.format(acq_list_hashed_dict[key]['_id']))
-                complete = False
-        
-        if complete is True:
-            print('orbit {} is complete.'.format(orbit))
-            for key in acq_list_hashed_dict.keys():
-                if completed_hashed_dict.get(key, False) is False: # pass over any objects that have already been published
-                    if completed_gunws.get(orbit, False) is False:
-                        completed_gunws[orbit] = [gunw_hashed_dict.get(key, False)]
-                    else:
-                        completed_gunws[orbit].append(gunw_hashed_dict.get(key, False))
+class evaluate():
+    '''evaluates input product for completeness. Tags GUNWs/GUNW-merged & publishes AOI_TRACK products'''
+    def __init__(self):
+        '''fill values from context, error if invalid inputs, then kickoff evaluation'''
+        self.ctx = load_context()
+        self.prod_type = self.ctx.get('prod_type', False)
+        self.track_number = self.ctx.get('track_number', False)
+        self.full_id_hash = self.ctx.get('full_id_hash', False)
+        self.uid = self.ctx.get('uid', False)
+        self.location = self.ctx.get('location', False)
+        self.starttime = self.ctx.get('starttime', False)
+        self.endtime = self.ctx.get('endtime', False)
+        self.version = self.ctx.get('version', False)
+        self.orbit_number = self.ctx.get('orbit_number', False)
+        # exit if invalid input product type
+        if self.prod_type not in ALLOWED_PROD_TYPES:
+            raise Exception('input product type: {} not in allowed product types for PGE'.format(self.prod_type))
+        if not self.prod_type is 'area_of_interest' and not self.full_id_hash:
+            warnings.warn('Warning: full_id_hash not found in metadata. Will attempt to generate')
+        if not self.prod_type is 'area_of_interest' and self.track_number is False:
+            raise Exception('metadata.track_number not filled. Cannot evaluate.')
+        # run evaluation & publishing by job type
+        if self.prod_type is 'area_of_interest':
+            self.run_aoi_evaluation()
         else:
-            print('orbit {} is incomplete'.format(orbit))
-        print('all completed gunws: {}'.format(len(completed_gunws)))
-    return completed_gunws
+            self.run_gunw_evaluation()
 
+    def run_aoi_evaluation(self):
+        '''runs the evaluation & publishing for an aoi'''
+        # retrieve all gunws, & gunw-merged products over an aoi
+        s1_gunw = get_objects('S1-GUNW', location=self.location, starttime=self.starttime, endtime=self.endtime)
+        s1_gunw_merged = get_objects('S1-GUNW-MERGED', location=self.location, starttime=self.starttime, endtime=self.endtime)
+        # get all acq-list products over the aoi
+        acq_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
+        # get the full aoi product
+        aoi = get_objects('area_of_interest', uid=self.uid, version=self.version)
+        for gunw_list in [s1_gunw, s1_gunw_merged]:
+            # evaluate to see which products are complete, tagging and publishing complete products
+            self.gen_completed(gunw_list, acq_list, aoi)
 
-def build_hashed_dict(object_list):
-    '''
-    Builds a dict of the object list where the keys are a hashed object of each objects
-    master and slave list. Returns the dict.
-    '''
-    hashed_dict = {}
-    for obj in object_list:
-        hashed_dict.update({gen_hash(obj):obj})
-    return hashed_dict
+    def run_gunw_evaluation(self):
+        '''runs the evaluation and publishing for a gunw or gunw-merged'''
+        # determine which AOI(s) the gunw corresponds to
+        all_acq_lists = get_objects('S1-GUNW-acq-list', full_id_hash=self.full_id_hash) 
+        acq_by_aoi = sort_by_aoi(all_acq_lists)
+        for aoi_id in acq_by_aoi.keys():
+            print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
+            # get all acq-list products
+            acq_lists = acq_by_aoi.get(aoi_id, [])
+            # get the aoi product
+            aois = get_objects('area_of_interest', uid=aoi_id)
+            if len(aois) > 1:
+                raise Exception('unable to distinguish between multiple AOIs with same uid but different version: {}}'.format(aoi_id))
+            if len(aois) == 0:
+                warnings.warn('unable to find referenced AOI: {}'.format(aoi_id))
+                continue
+            aoi = aois[0]
+            # get all associated gunw or gunw-merged products
+            gunws = get_objects(self.prod_type, track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
+            # evaluate to determine which products are complete, tagging & publishing complete products
+            self.gen_completed(gunws, acq_lists, aoi)
 
-def gen_hash(es_object):
-    '''Generates a hash from the master and slave scene list'''
-    master = get_master_slave_scenes(es_object, master=True)
-    slave = get_master_slave_scenes(es_object, master=False)
-    master = pickle.dumps(sorted(master))
-    slave = pickle.dumps(sorted(slave))
-    hsh = '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
-    #print('{} hash : {}'.format(es_object.get('_id'), hsh))
-    return hsh
+    def gen_completed(self, gunws, acq_lists, aoi):
+        '''determines which gunws (or gunw-merged) products are complete along track & orbit,
+        tags and publishes TRACK_AOI products for those that are complete'''
+        complete = []
+        hashed_gunw_dct = sort_by_hash(gunws)
+        for track_list in sort_by_track(acq_lists).items():
+            for orbit_list in sort_by_orbit(track_list).items():
+                # get all full_id_hashes in the acquisition list
+                all_hashes = [get_hash(x) for x in orbit_list]
+                # if all of them are in the list of gunw hashes, they are complete
+                complete = True
+                for full_id_hash in all_hashes:
+                    if not hashed_gunw_dct.get(full_id_hash, False):
+                        complete = False
+                        break
+                # they are complete. tag & generate products
+                if complete:
+                    self.tag_and_publish(orbit_list, aoi)
 
+    def tag_and_publish(self, gunws, aoi):
+        '''tags each object in the input list, then publishes an appropriate
+           aoi-track product'''
+        if len(gunws) < 1:
+            return
+        for obj in gunws:
+            tag = aoi.get('_id')
+            uid = obj.get('_id')
+            prod_type = obj.get('_type')
+            index = obj.get('_index')
+            tagger.add_tag(index, uid, prod_type, tag)
+        build_validated_product.build(gunws, AOI_TRACK_VERSION, AOI_TRACK_PREFIX, aoi, get_track(gunws[0]), get_orbit(gunws[0]))
 
-def get_master_slave_scenes(es_object, master=True):
-    '''gets the master/slave acquisition id list from the es object, returns the list'''
-    key = 'slave_scenes'
-    if master:
-        key = 'master_scenes'
-    met = es_object.get('_source', {}).get('metadata', {})
-    lst = met.get(key, False)
-    if is_acq(lst):
-        return lst
-    lst = met.get('context', {}).get('input_metadata', {}).get(key, False)
-    if is_acq(lst):
-        return lst
-    print('unable to find master/slave scenes from {}'.format(es_object.get('_id')))
-    return []
-
-def is_acq(obj):
-    '''returns True/False if the object contains acquisitions'''
-    if not isinstance(obj, list):
-       return False
-    for element in obj:
-        if not element.startswith('acquisition'):
-            return False
-    return True
-
-
-def get_all_tracks(obj_dcts_list):
-    '''returns all possible tracks from object list containing keys by track'''
-    all_tracks = []
-    for obj in obj_dcts_list:
-        tracks = obj.keys()
-        all_tracks = list(set(all_tracks + tracks))
-    return all_tracks
-
-def get_aoi(aoi_id, aoi_index):
-    '''
-    retrieves the AOI from ES
-    '''
-    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
-    grq_url = '{0}/es/{1}/_search'.format(grq_ip, aoi_index)
-    es_query = {"query":{"bool":{"must":[{"term":{"id.raw":aoi_id}}]}}}
-    result = query_es(grq_url, es_query)
-    if len(result) < 1:
-        raise Exception('Found no results for AOI: {}'.format(aoi_id))
-    return result[0]
-
-def get_objects(object_type, aoi, track_number):
+def get_objects(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
     '''returns all objects of the object type that intersect both
     temporally and spatially with the aoi'''
-    #determine index
-    idx_dct = {'acq-list': 'grq_*_s1-gunw-acq-list', 'ifg':'grq_*_s1-gunw', 'ifg-cfg':'grq_*_s1-gunw-ifg-cfg', 'ifg-merged': 'grq_*_s1-gunw-merged', 'ifg-completed': 'grq_*_s1-gunw-aoi-track', 'ifg-merged-completed': 'grq_*_s1-gunw-merged-aoi-track'}
-    idx = idx_dct.get(object_type)
-    starttime = aoi.get('_source', {}).get('starttime')
-    endtime = aoi.get('_source', {}).get('endtime')
-    location = aoi.get('_source', {}).get('location')
+    idx = INDEX_MAPPING.get(prod_type) # mapping of the product type to the index
+    print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False)
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
-    if track_number is not False:
-        grq_query = {"query":{"filtered":{"query":{"geo_shape":{"location": {"shape":location}}},"filter":{"bool":{"must":[{"term":{"metadata.track_number":track_number}},{"range":{"endtime":{"from":starttime}}},{"range":{"starttime":{"to":endtime}}}]}}}},"from":0,"size":1000}
-    else:
-        grq_query = {"query":{"filtered":{"query":{"geo_shape":{"location": {"shape":location}}},"filter":{"bool":{"must":[{"range":{"endtime":{"from":starttime}}},{"range":{"starttime":{"to":endtime}}}]}}}},"from":0,"size":1000}
+    filtered = {}
+    if location:
+        filtered["query"] = {"geo_shape": {"location": {"shape": location}}}
+    if starttime or endtime or full_id_hash or track_number or version:
+        must = []
+        if starttime:
+            must.append({"range": {"endtime": {"from": starttime}}})
+        if endtime:
+            must.append({"range": {"starttime": {"from": endtime}}})
+        if full_id_hash:
+            must.append({"term": {"metadata.full_id_hash": full_id_hash}})
+        if track_number:
+            must.append({"term": {"metadata.track_number": full_id_hash}})
+        if version:
+            must.append({"term": {"version": version}})
+        if uid:
+            must.append({"term": {"id": uid}})
+        if aoi:
+            must.append({"term": {"metadata.aoi": aoi}})
+        filtered["filter"] = {"bool":{"must":must}}
+    grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
     results = query_es(grq_url, grq_query)
-    print('found {} {} products'.format(len(results), object_type))
+    print('found {} {} products matching query.'.format(len(results), prod_type))
+    # if it's an orbit, filter out the bad orbits client-side
+    if orbit_numbers:
+        orbit_key = stringify_orbit(orbit_numbers)
+        results = sort_by_orbit(results).get(orbit_key, [])
     return results
+
+def print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
+    '''print statement describing grq query'''
+    statement = 'Querying for products of type: {}'.format(prod_type)
+    if location:
+        statement += '\nwith location:     {}'.format(location)
+    if starttime:
+        statement += '\nwith starttime:    {}'.format(starttime)
+    if endtime:
+        statement += '\nwith endtime  :    {}'.format(endtime)
+    if full_id_hash:
+        statement += '\nwith full_id_hash: {}'.format(full_id_hash)
+    if track_number:
+        statement += '\nwith track_number: {}'.format(track_number)
+    if orbit_numbers:
+        statement += '\nwith orbits:       {}'.format(', '.join(orbit_numbers))
+    if version:
+        statement += '\nwith version:      {}'.format(version)
+    if uid:
+        statement += '\nwith uid:          {}'.format(uid)
+    if uid:
+        statement += '\nwith metadata.aoi: {}'.format(aoi)
+    print(statement)
 
 def load_context():
     '''loads the context file into a dict'''
@@ -250,11 +225,24 @@ def sort_by_orbit(es_result_list):
     '''
     sorted_dict = {}
     for result in es_result_list:
-        orbit = '_'.join([str(x) for x in get_orbit(result)])
+        orbit = get_orbit(result)
         if orbit in sorted_dict.keys():
             sorted_dict.get(orbit, []).append(result)
         else:
             sorted_dict[orbit] = [result]
+    return sorted_dict
+
+def sort_by_hash(es_results_list):
+    '''
+    Goes through the objects in the result list, and places them in an dict where key is full_id_hash (or generated version of hash)
+    '''
+    sorted_dict = {}
+    for result in es_results_list:
+        idhash = get_hash(result)
+        if idhash in sorted_dict.keys():
+            sorted_dict.get(idhash, []).append(result)
+        else:
+            sorted_dict[idhash] = [result]
     return sorted_dict
 
 def sort_by_track(es_result_list):
@@ -271,24 +259,20 @@ def sort_by_track(es_result_list):
             sorted_dict[track] = [result]
     return sorted_dict
 
-def sort_by_track_and_version(es_result_list):
+def sort_by_aoi(es_result_list):
     '''
-    Goes through the objects in the result list, and places them in a dict where keys are track, then version
+    Goes through the objects in the result list, and places them in an dict where key is aoi_id
     '''
-    print('found {} results'.format(len(es_result_list)))
+    #print('found {} results'.format(len(es_result_list)))
     sorted_dict = {}
-    #get all versions
-    #versions = list(set([get_version(x) for x in es_result_list]))
-    tracks = list(set([get_track(x) for x in es_result_list]))
-    for track in tracks:
-        sorted_dict[track] = {}
     for result in es_result_list:
-        track = get_track(result)
-        vers = get_version(result)
-        if vers in sorted_dict[track].keys():
-            sorted_dict[track].get(vers, []).append(result)
+        aoi_id = result.get('_source', {}).get('metadata', {}).get('aoi', False)
+        if not aoi_id:
+            continue
+        if aoi_id in sorted_dict.keys():
+            sorted_dict.get(aoi_id, []).append(result)
         else:
-            sorted_dict[track][vers] = [result]
+            sorted_dict[aoi_id] = [result]
     return sorted_dict
 
 def get_track(es_obj):
@@ -309,21 +293,57 @@ def get_track(es_obj):
     raise Exception('unable to find track for: {}'.format(es_obj.get('_id', '')))
 
 def get_orbit(es_obj):
-    '''returns the orbit from the elasticsearch object'''
+    '''returns the orbit as a string from the elasticsearch object'''
     es_ds = es_obj.get('_source', {})
     #iterate through ds
-    track_met_options = ['orbit', 'orbitNumber', 'orbit_number']
-    for tkey in track_met_options:
-        track = es_ds.get(tkey, False)
-        if track:
-            return track
+    options = ['orbit', 'orbitNumber', 'orbit_number']
+    for tkey in options:
+        orbit = es_ds.get(tkey, False)
+        if orbit:
+            return stringify_orbit(orbit)
     #if that doesn't work try metadata
     es_met = es_ds.get('metadata', {})
-    for tkey in track_met_options:
-        track = es_met.get(tkey, False)
-        if track:
-            return track
+    for tkey in options:
+        orbit = es_met.get(tkey, False)
+        if orbit:
+            return stringify_orbit(orbit)
     raise Exception('unable to find orbit for: {}'.format(es_obj.get('_id', '')))
+
+def get_hash(es_obj):
+    '''retrieves the full_id_hash. if it doesn't exists, it
+        attempts to generate one'''
+    full_id_hash = es_obj.get('_source', {}).get('metadata', {}).get('full_id_hash', False)
+    if full_id_hash:
+        return full_id_hash
+    return gen_hash(es_obj)
+
+def gen_hash(es_obj):
+    '''copy of hash used in the enumerator'''
+    met = es_obj.get('_source', {}).get('metadata', {})
+    master_slcs = met.get('master_scenes', met.get('reference_scenes', False))
+    slave_slcs = met.get('slave_scenes', met.get('secondary_scenes', False))
+    master_ids_str=""
+    slave_ids_str=""
+    for slc in sorted(master_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if master_ids_str == "":
+            master_ids_str = slc
+        else:
+            master_ids_str += " "+slc
+    for slc in sorted(slave_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if slave_ids_str == "":
+            slave_ids_str = slc
+        else:
+            slave_ids_str += " "+slc
+    id_hash = hashlib.md5(json.dumps([master_ids_str, slave_ids_str]).encode("utf8")).hexdigest()
+    return id_hash
+
+def stringify_orbit(orbit_list):
+    '''converts the list into a string'''
+    return '_'.join([str(x).zfill(3) for x in sorted(orbit_list)])
 
 def get_version(es_obj):
     '''returns the version of the index. Since we are ignoring the subversions, only returns the main version.
@@ -333,4 +353,4 @@ def get_version(es_obj):
     return version
 
 if __name__ == '__main__':
-    main()
+    evaluate()

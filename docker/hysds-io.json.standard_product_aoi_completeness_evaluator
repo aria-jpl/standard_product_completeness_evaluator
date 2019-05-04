@@ -1,21 +1,31 @@
 {
-    "label": "Standard Product S1-GUNW - aoi_completeness_evaluator",
+    "label": "Standard Product S1-GUNW - AOI Completeness Evaluator",
     "submission_type": "iteration",
     "enable_dedup": false,
     "params" : [
     {
-      "name": "aoi_index",
-      "from": "dataset_jpath:_index"
-    },
-    {
-      "name": "aoi_id",
+      "name": "uid",
       "from": "dataset_jpath:_id"
     },
     {
-      "name": "track_number",
-      "from": "submitter",
-      "type": "text",
-      "optional": true
+      "name": "prod_type",
+      "from": "dataset_jpath:_type"
+    },
+    {
+      "name": "location",
+      "from": "dataset_jpath:_source.location"
+    },
+    {
+      "name": "starttime",
+      "from": "dataset_jpath:_source.starttime"
+    },
+    {
+      "name": "endtime",
+      "from": "dataset_jpath:_source.endtime"
+    },
+    {
+      "name": "version",
+      "from": "dataset_jpath:_version"
     }
     ]
 }
