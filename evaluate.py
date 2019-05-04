@@ -27,8 +27,8 @@ INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
                  'S1-GUNW':'grq_*_s1-gunw',
                  'S1-GUNW-MERGED': 'grq_*_s1-*-merged',
                  'S1-GUNW-acqlist-audit_trail': 'grq_*_s1-gunw-acqlist-audit_trail',
-                 'S1-GUNW-completed': 'grq_*_s1-gunw-aoi_track',
-                 'S1-GUNW-merged-completed': 'grq_*_s1-gunw-merged-aoi_track',
+                 'S1-GUNW-AOI_TRACK': 'grq_*_s1-gunw-aoi_track',
+                 'S1-GUNW-MERGED-AOI_TRACK': 'grq_*_s1-gunw-merged-aoi_track',
                  'area_of_interest': 'grq_*_area_of_interest'}
 
 class evaluate():
@@ -88,11 +88,15 @@ class evaluate():
                 continue
             aoi = aois[0]
             # get all audit-trail products that match orbit and track
-            audit_trail_list = audit_by_aoi.get(aoi_id, [])
             matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
             print('Found {} audit trail products matching track: {}'.format(len(matching_audit_trail_list), self.track_number))
+            if len(matching_audit_trail_list) < 1:
+                continue
             #get all acq-list products that match the audit trail
             acq_lists = self.get_matching_acq_lists(aoi, matching_audit_trail_list)
+            if len(acq_lists) < 1:
+                print('Found {} acq-lists.'.format(len(acq_lists)))
+                continue
             #filter invalid orbits
             acq_lists = sort_by_orbit(acq_lists).get(stringify_orbit(self.orbit_number))
             # get all associated gunw or gunw-merged products
@@ -125,7 +129,7 @@ class evaluate():
                         print('hash: {} is missing... products are incomplete.'.format(full_id_hash))
                         break
                 # they are complete. tag & generate products
-                if complete: 
+                if complete:
                     gunw_list = [hashed_gunw_dct.get(x) for x in all_hashes]
                     print('found {} products complete over aoi: {} for track: {} and orbit: {}'.format(len(gunw_list), aoi.get('_id'), track, orbit))
                     self.tag_and_publish(gunw_list, aoi)
@@ -134,6 +138,9 @@ class evaluate():
         '''tags each object in the input list, then publishes an appropriate
            aoi-track product'''
         if len(gunws) < 1:
+            return
+        if self.aoi_track_is_published(gunws, aoi.get('_source').get('id')):
+            print('AOI_TRACK product is already published... skipping.')
             return
         for obj in gunws:
             tag = aoi.get('_source').get('id')
@@ -157,6 +164,17 @@ class evaluate():
                 matching.append(acq_list)
         return matching
 
+    def aoi_track_is_published(self, gunws, aoi_id):
+        '''determines if the aoi_track product is published already. Returns True/False'''
+        gunw = gunws[-1]
+        gunw_type = gunw.get('_type')
+        prod_type = 'S1-GUNW-AOI_TRACK'
+        if gunw_type is 'S1-GUNW-MERGED':
+            prod_type = 'S1-GUNW-MERGED-AOI_TRACK'
+        matches = get_objects('S1-GUNW-merged-completed', track_number=get_track(gunw), orbit_numbers=get_orbit(gunw), aoi=aoi_id)
+        if matches:
+            return True
+        return False
 
 def get_objects(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
     '''returns all objects of the object type that intersect both
@@ -183,7 +201,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if uid:
             must.append({"term": {"id.raw": uid}})
         if aoi:
-            must.append({"term": {"metadata.aoi": aoi}})
+            must.append({"term": {"metadata.aoi.raw": aoi}})
         filtered["filter"] = {"bool":{"must":must}}
     if location:
         grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
