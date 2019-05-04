@@ -5,11 +5,11 @@
     "params" : [
     {
       "name": "uid",
-      "from": "dataset_jpath:_id"
+      "from": "dataset_jpath:_source.id"
     },
     {
       "name": "prod_type",
-      "from": "dataset_jpath:_type"
+      "from": "dataset_jpath:_source.dataset"
     },
     {
       "name": "location",
@@ -25,7 +25,7 @@
     },
     {
       "name": "version",
-      "from": "dataset_jpath:_version"
+      "from": "dataset_jpath:_source.version"
     }
     ]
 }
