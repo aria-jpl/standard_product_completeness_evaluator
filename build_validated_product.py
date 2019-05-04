@@ -91,15 +91,14 @@ def build_met(ifg_list, version, product_prefix, aoi, track, orbit):
     endtime = get_times(ifg_list, minimum = False)
     date_pair = '{}_{}'.format(starttime[:10].replace('-', ''), endtime[:10].replace('-',''))    
     gunw_list = [x.get('_id') for x in ifg_list]
-    orbits = set()
+    orbits = []
     for x in ifg_list:
-        orbits.add(x.get('_source', {}).get('metadata',{}).get('orbit_number'))
-    orbits = list(orbits)
+        orbits.extend(x.get('_source', {}).get('metadata',{}).get('orbit_number'))
+    orbits = list(set(orbits))
     s1_gunw_ids = []
     s1_gunws = []
     s1_gunw_urls = []
     for ifg in ifg_list:
-        print(json.dumps(ifg.get('_source')))
         ifg_id = ifg.get('_id')
         s1_gunw_ids.append(ifg_id)
         ifg_met = ifg.get('_source').get('metadata')
