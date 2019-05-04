@@ -78,7 +78,7 @@ class evaluate():
         # fill the hash if it doesn't exist
         if self.full_id_hash is False:
             print('attempting to fill hash for submitted product...')
-            self.full_id_hash = gen_hash(get_objects(self.prod_type, uid=self.uid))
+            self.full_id_hash = gen_hash(get_objects(self.prod_type, uid=self.uid)[0])
             print('Found hash {}'.format(self.full_id_hash))
         # determine which AOI(s) the gunw corresponds to
         all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
