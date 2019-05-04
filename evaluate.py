@@ -23,6 +23,7 @@ import build_validated_product
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 AOI_TRACK_PREFIX = 'S1-GUNW-AOI_TRACK'
+AOI_TRACK_MERGED_PREFIX = 'S1-GUNW-MERGED-AOI_TRACK'
 AOI_TRACK_VERSION = 'v2.0'
 ALLOWED_PROD_TYPES = ['S1-GUNW', "S1-GUNW-MERGED", "area_of_interest"]
 INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
@@ -164,7 +165,10 @@ class evaluate():
             prod_type = obj.get('_type')
             index = obj.get('_index')
             tagger.add_tag(index, uid, prod_type, tag)
-        build_validated_product.build(gunws, AOI_TRACK_VERSION, AOI_TRACK_PREFIX, aoi, get_track(gunws[0]), get_orbit(gunws[0]))
+        prefix = AOI_TRACK_PREFIX
+        if gunws[0].get('_type') == 'S1-GUNW-MERGED':
+            prefix = AOI_TRACK_MERGED_PREFIX
+        build_validated_product.build(gunws, AOI_TRACK_VERSION, prefix, aoi, get_track(gunws[0]), get_orbit(gunws[0]))
 
     def get_matching_acq_lists(self, aoi, audit_trail_list):
         '''returns all acquisition lists matching the audit trail products under the given aoi'''

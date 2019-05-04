@@ -1,5 +1,5 @@
     {
-      "ipath": "ariamh::data/s1-gunw-aoi-track",
+      "ipath": "ariamh::data/S1-GUNW-AOI_TRACK",
       "match_pattern": "/(?P<id>S1-GUNW-AOI_TRACK.*)$",
       "alt_match_pattern": null,
       "extractor": null,
@@ -14,5 +14,4 @@
       "extractor": null,
       "level": "l1",
       "type": "ancillary"
-    },
-
+    }
