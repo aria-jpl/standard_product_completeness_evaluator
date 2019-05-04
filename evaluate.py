@@ -71,9 +71,9 @@ class evaluate():
         # get the full aoi product
         aois = get_objects('area_of_interest', uid=self.uid, version=self.version)
         if len(aois) > 1:
-            raise Exception('unable to distinguish between multiple AOIs with same uid but different version: {}}'.format(aoi_id))
+            raise Exception('unable to distinguish between multiple AOIs with same uid but different version: {}}'.format(self.uid))
         if len(aois) == 0:
-            raise Exception('unable to find referenced AOI: {}'.format(aoi_id))
+            raise Exception('unable to find referenced AOI: {}'.format(self.uid))
         aoi = aois[0]
         # get the matching acquisition list products
         acq_list = self.get_matching_acq_lists(aoi, audit_trail_list)
@@ -121,6 +121,7 @@ class evaluate():
         '''determines which gunws (or gunw-merged) products are complete along track & orbit,
         tags and publishes TRACK_AOI products for those that are complete'''
         complete = []
+        hashed_acq_dct = sort_duplicates_by_hash(acq_lists)
         hashed_gunw_dct = sort_duplicates_by_hash(gunws) # iterates through the list & removes older gunws with duplicate full_id_hash
         track_dct = sort_by_track(acq_lists)
         for track in track_dct.keys():
@@ -137,11 +138,24 @@ class evaluate():
                 print('all relevant hashes over AOI: {}'.format(', '.join(all_hashes)))
                 # if all of them are in the list of gunw hashes, they are complete
                 complete = True
+                complete_acq_lists = []
+                incomplete_acq_lists = []
+                missing_hashes = []
                 for full_id_hash in all_hashes:
                     if hashed_gunw_dct.get(full_id_hash, False) is False:
                         complete = False
+                        missing_hashes.append(full_id_hash)
                         print('hash: {} is missing... products are incomplete.'.format(full_id_hash))
-                        break
+                        incomplete_acq_lists.append(hashed_acq_dct.get(full_id_hash))
+                    else:
+                        complete_acq_lists.append(hashed_acq_dct.get(full_id_hash))
+                print('found {} complete and {} missing hashes.'.format(len(complete_acq_lists), len(incomplete_acq_lists)))
+                print('missing hashes: {}'.format(', '.join(missing_hashes)))
+                print('tagging acq-lists appropriately')
+                for obj in complete_acq_lists:
+                    self.tag_obj(obj, 'gunw_generated')
+                for obj in incomplete_acq_lists:
+                    self.tag_obj(obj, 'gunw_missing')
                 # they are complete. tag & generate products
                 if complete:
                     gunw_list = []
@@ -161,14 +175,18 @@ class evaluate():
         print('AOI_TRACK product has not been published. Publishing product...')
         for obj in gunws:
             tag = aoi.get('_source').get('id')
-            uid = obj.get('_source').get('id')
-            prod_type = obj.get('_type')
-            index = obj.get('_index')
-            tagger.add_tag(index, uid, prod_type, tag)
+            self.tag_obj(obj, tag)
         prefix = AOI_TRACK_PREFIX
         if gunws[0].get('_type') == 'S1-GUNW-MERGED':
             prefix = AOI_TRACK_MERGED_PREFIX
         build_validated_product.build(gunws, AOI_TRACK_VERSION, prefix, aoi, get_track(gunws[0]), get_orbit(gunws[0]))
+
+    def tag_obj(self, obj, tag):
+        '''tags the object with the given tag'''
+        uid = obj.get('_source').get('id')
+        prod_type = obj.get('_type')
+        index = obj.get('_index')
+        tagger.add_tag(index, uid, prod_type, tag)
 
     def get_matching_acq_lists(self, aoi, audit_trail_list):
         '''returns all acquisition lists matching the audit trail products under the given aoi'''
