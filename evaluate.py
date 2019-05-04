@@ -48,14 +48,14 @@ class evaluate():
         self.version = self.ctx.get('version', False)
         self.orbit_number = self.ctx.get('orbit_number', False)
         # exit if invalid input product type
-        if self.prod_type not in ALLOWED_PROD_TYPES:
+        if not self.prod_type in ALLOWED_PROD_TYPES:
             raise Exception('input product type: {} not in allowed product types for PGE'.format(self.prod_type))
-        if not self.prod_type is 'area_of_interest' and not self.full_id_hash:
+        if not self.prod_type == 'area_of_interest' and not self.full_id_hash:
             warnings.warn('Warning: full_id_hash not found in metadata. Will attempt to generate')
         #if not self.prod_type is 'area_of_interest' and self.track_number is False:
         #    raise Exception('metadata.track_number not filled. Cannot evaluate.')
         # run evaluation & publishing by job type
-        if self.prod_type is 'area_of_interest':
+        if self.prod_type == 'area_of_interest':
             self.run_aoi_evaluation()
         else:
             self.run_gunw_evaluation()
@@ -68,7 +68,12 @@ class evaluate():
         # get all audit_trail products over the aoi
         audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
         # get the full aoi product
-        aoi = get_objects('area_of_interest', uid=self.uid, version=self.version)
+        aois = get_objects('area_of_interest', uid=self.uid, version=self.version)
+        if len(aois) > 1:
+            raise Exception('unable to distinguish between multiple AOIs with same uid but different version: {}}'.format(aoi_id))
+        if len(aois) == 0:
+            raise Exception('unable to find referenced AOI: {}'.format(aoi_id))
+        aoi = aois[0]
         # get the matching acquisition list products
         acq_list = self.get_matching_acq_lists(aoi, audit_trail_list)
         for gunw_list in [s1_gunw, s1_gunw_merged]:
@@ -121,6 +126,7 @@ class evaluate():
             track_list = track_dct.get(track, [])
             orbit_dct = sort_by_orbit(track_list)
             for orbit in orbit_dct.keys():
+                print('------------------------------')
                 orbit_list = orbit_dct.get(orbit, [])
                 print('Found {} ACQ-lists over aoi: {} & track: {} & orbit: {}'.format(len(orbit_list), aoi.get('_source').get('id'), track, orbit))
                 print('Evaluating GUNWs and Acquisitions over track: {} and orbit: {}'.format(track, orbit))
@@ -139,7 +145,7 @@ class evaluate():
                 if complete:
                     gunw_list = []
                     for hsh in all_hashes:
-                        gunw_list.extend(hashed_gunw_dct.get(hsh))
+                        gunw_list.append(hashed_gunw_dct.get(hsh))
                     print('found {} products complete over aoi: {} for track: {} and orbit: {}'.format(len(gunw_list), aoi.get('_id'), track, orbit))
                     self.tag_and_publish(gunw_list, aoi)
 
@@ -179,7 +185,7 @@ class evaluate():
         gunw = gunws[-1]
         gunw_type = gunw.get('_type')
         prod_type = 'S1-GUNW-AOI_TRACK'
-        if gunw_type is 'S1-GUNW-MERGED':
+        if gunw_type == 'S1-GUNW-MERGED':
             prod_type = 'S1-GUNW-MERGED-AOI_TRACK'
         matches = get_objects(prod_type, track_number=get_track(gunw), orbit_numbers=gunw.get('_source').get('metadata').get('orbit_number'), aoi=aoi_id)
         if matches:
@@ -201,7 +207,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if starttime:
             must.append({"range": {"endtime": {"from": starttime}}})
         if endtime:
-            must.append({"range": {"starttime": {"from": endtime}}})
+            must.append({"range": {"starttime": {"to": endtime}}})
         if full_id_hash:
             must.append({"term": {"metadata.full_id_hash.raw": full_id_hash}})
         if track_number:
@@ -217,7 +223,8 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
     else:
         grq_query = {"query": {"bool":{"must": must}}}
-    #print(grq_query)
+    print(grq_url)
+    print(grq_query)
     results = query_es(grq_url, grq_query)
     print('found {} {} products matching query.'.format(len(results), prod_type))
     # if it's an orbit, filter out the bad orbits client-side
@@ -419,9 +426,10 @@ def sort_duplicates_by_hash(es_results_list):
         idhash = get_hash(result)
         if idhash in sorted_dict.keys():
             latest_result = get_most_recent(result, sorted_dict.get(idhash))
+            print('found duplicate gunws: {}, {}'.format(result.get('_source').get('id'), sorted_dict.get(idhash).get('_source').get('id')))
             sorted_dict[idhash] = latest_result
         else:
-            sorted_dict[idhash] = [result]
+            sorted_dict[idhash] = result
     return sorted_dict
 
 def get_most_recent(obj1, obj2):
