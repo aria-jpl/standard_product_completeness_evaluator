@@ -151,11 +151,13 @@ class evaluate():
                         complete_acq_lists.append(hashed_acq_dct.get(full_id_hash))
                 print('found {} complete and {} missing hashes.'.format(len(complete_acq_lists), len(incomplete_acq_lists)))
                 print('missing hashes: {}'.format(', '.join(missing_hashes)))
-                print('tagging acq-lists appropriately')
-                for obj in complete_acq_lists:
-                    self.tag_obj(obj, 'gunw_generated')
-                for obj in incomplete_acq_lists:
-                    self.tag_obj(obj, 'gunw_missing')
+                # tag acq-lists if iterating over gunws (not gunw merged')
+                if orbit_list[0].get('_type', False) == 'S1-GUNW':
+                    print('tagging acq-lists appropriately')
+                    for obj in complete_acq_lists:
+                        self.tag_obj(obj, 'gunw_generated')
+                    for obj in incomplete_acq_lists:
+                        self.tag_obj(obj, 'gunw_missing')
                 # they are complete. tag & generate products
                 if complete:
                     gunw_list = []
