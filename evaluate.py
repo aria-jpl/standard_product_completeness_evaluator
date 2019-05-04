@@ -14,6 +14,8 @@ import hashlib
 import urllib3
 import requests
 import warnings
+import dateutil
+import dateutil.parser
 from hysds.celery import app
 import tagger
 import build_validated_product
@@ -50,8 +52,8 @@ class evaluate():
             raise Exception('input product type: {} not in allowed product types for PGE'.format(self.prod_type))
         if not self.prod_type is 'area_of_interest' and not self.full_id_hash:
             warnings.warn('Warning: full_id_hash not found in metadata. Will attempt to generate')
-        if not self.prod_type is 'area_of_interest' and self.track_number is False:
-            raise Exception('metadata.track_number not filled. Cannot evaluate.')
+        #if not self.prod_type is 'area_of_interest' and self.track_number is False:
+        #    raise Exception('metadata.track_number not filled. Cannot evaluate.')
         # run evaluation & publishing by job type
         if self.prod_type is 'area_of_interest':
             self.run_aoi_evaluation()
@@ -113,7 +115,7 @@ class evaluate():
         '''determines which gunws (or gunw-merged) products are complete along track & orbit,
         tags and publishes TRACK_AOI products for those that are complete'''
         complete = []
-        hashed_gunw_dct = sort_by_hash(gunws)
+        hashed_gunw_dct = sort_duplicates_by_hash(gunws) # iterates through the list & removes older gunws with duplicate full_id_hash
         track_dct = sort_by_track(acq_lists)
         for track in track_dct.keys():
             track_list = track_dct.get(track, [])
@@ -406,6 +408,29 @@ def gen_hash(es_obj):
             slave_ids_str += " "+slc
     id_hash = hashlib.md5(json.dumps([master_ids_str, slave_ids_str]).encode("utf8")).hexdigest()
     return id_hash
+
+def sort_duplicates_by_hash(es_results_list):
+    '''
+    iterates through the list of products and removes products with duplicate full_id_hash
+    (using creation time) and returns a dict sorted by full_id_hash.
+    '''
+    sorted_dict = {}
+    for result in es_results_list:
+        idhash = get_hash(result)
+        if idhash in sorted_dict.keys():
+            latest_result = get_most_recent(result, sorted_dict.get(idhash))
+            sorted_dict[idhash] = latest_result
+        else:
+            sorted_dict[idhash] = [result]
+    return sorted_dict
+
+def get_most_recent(obj1, obj2):
+    '''returns the object with the most recent ingest time'''
+    ctime1 = dateutil.parser.parse(obj1.get('_source', {}).get('creation_timestamp', False))
+    ctime2 = dateutil.parser.parse(obj2.get('_source', {}).get('creation_timestamp', False))
+    if ctime1 > ctime2:
+        return obj1
+    return obj2
 
 def stringify_orbit(orbit_list):
     '''converts the list into a string'''
