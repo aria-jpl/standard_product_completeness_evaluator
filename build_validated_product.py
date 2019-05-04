@@ -10,6 +10,7 @@ import json
 import shutil
 import pickle
 import hashlib
+import dateutil
 import dateutil.parser
 from shapely.geometry import Polygon, MultiPolygon, mapping
 from shapely.ops import cascaded_union
@@ -44,12 +45,34 @@ def gen_hash(es_object):
 
 def get_times(ifg_list, minimum=True):
     '''returns the minimum or the maximum start/end time'''
-    times = [dateutil.parser.parse(x.get('_source').get('metadata').get('secondary_date')) for x in ifg_list] + [dateutil.parser.parse(x.get('_source').get('metadata').get('reference_date')) for x in ifg_list]
+    times = [dateutil.parser.parse(get_secondary_time(x)) for x in ifg_list] + [dateutil.parser.parse(get_reference_time(x)) for x in ifg_list]
     if minimum:
         time = min(times)
     else:
         time = max(times)
     return time.strftime('%Y-%m-%dT00:00:00.000Z')
+
+def get_secondary_time(obj):
+    '''attempts to return proper dates for an object'''
+    date = obj.get('_source', {}).get('metadata', {}).get('secondary_date', [])
+    if date:
+        return date
+    # secondary doesn't exist
+    date = obj.get('_source', {}).get('metadata', {}).get('sensing_start', False)
+    if date:
+        return date
+    return obj.get('_source', {}).get('starttime', False)
+
+def get_reference_time(obj):
+    '''attempts to return proper dates for an object'''
+    date = obj.get('_source', {}).get('metadata', {}).get('reference_date', [])
+    if date:
+        return date
+    # secondary doesn't exist
+    date = obj.get('_source', {}).get('metadata', {}).get('sensing_stop', False)
+    if date:
+        return date
+    return obj.get('_source', {}).get('endtime', False)
 
 def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Generates the ds dict'''
@@ -57,7 +80,7 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     endtime = get_times(ifg_list, minimum = False)
     date_pair = '{}_{}'.format(starttime[:10].replace('-', ''), endtime[:10].replace('-',''))    
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
-    print('uid: {}'.format(uid))
+    #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
     return ds
@@ -69,13 +92,14 @@ def build_met(ifg_list, version, product_prefix, aoi, track, orbit):
     date_pair = '{}_{}'.format(starttime[:10].replace('-', ''), endtime[:10].replace('-',''))    
     gunw_list = [x.get('_id') for x in ifg_list]
     orbits = set()
-    for x in ifg_list:    
-        orbits.update(x.get('_source').get('metadata').get('orbit_number'))
+    for x in ifg_list:
+        orbits.add(x.get('_source', {}).get('metadata',{}).get('orbit_number'))
     orbits = list(orbits)
     s1_gunw_ids = []
     s1_gunws = []
     s1_gunw_urls = []
     for ifg in ifg_list:
+        print(json.dumps(ifg.get('_source')))
         ifg_id = ifg.get('_id')
         s1_gunw_ids.append(ifg_id)
         ifg_met = ifg.get('_source').get('metadata')

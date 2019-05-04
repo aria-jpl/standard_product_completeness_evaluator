@@ -80,9 +80,6 @@ class evaluate():
         audit_by_aoi = sort_by_aoi(all_audit_trail)
         for aoi_id in audit_by_aoi.keys():
             print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
-            # get all audit-trail products
-            audit_trail_list = audit_by_aoi.get(aoi_id, [])
-            # get the aoi product
             aois = get_objects('area_of_interest', uid=aoi_id)
             if len(aois) > 1:
                 raise Exception('unable to distinguish between multiple AOIs with same uid but different version: {}}'.format(aoi_id))
@@ -90,8 +87,14 @@ class evaluate():
                 warnings.warn('unable to find referenced AOI: {}'.format(aoi_id))
                 continue
             aoi = aois[0]
+            # get all audit-trail products that match orbit and track
+            audit_trail_list = audit_by_aoi.get(aoi_id, [])
+            matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, location=aoi.get('_source').get('location'))
+            print('Found {} audit trail products matching track: {}'.format(len(matching_audit_trail_list), self.track_number))
             #get all acq-list products that match the audit trail
-            acq_lists = self.get_matching_acq_lists(aoi, audit_trail_list)
+            acq_lists = self.get_matching_acq_lists(aoi, matching_audit_trail_list)
+            #filter invalid orbits
+            acq_lists = sort_by_orbit(acq_lists).get(stringify_orbit(self.orbit_number))
             # get all associated gunw or gunw-merged products
             gunws = get_objects(self.prod_type, track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
             # evaluate to determine which products are complete, tagging & publishing complete products
@@ -101,20 +104,33 @@ class evaluate():
         '''determines which gunws (or gunw-merged) products are complete along track & orbit,
         tags and publishes TRACK_AOI products for those that are complete'''
         complete = []
+        print('acq-lists: {}'.format(json.dumps(acq_lists)))
         hashed_gunw_dct = sort_by_hash(gunws)
-        for track_list in sort_by_track(acq_lists).items():
-            for orbit_list in sort_by_orbit(track_list).items():
+        track_dct = sort_by_track(acq_lists)
+        print('all known tracks: {}'.format(track_dct.keys()))
+        for track in track_dct.keys():
+            track_list = track_dct.get(track, [])
+            orbit_dct = sort_by_orbit(track_list)
+            print('all known current orbit pairs: {}'.format(orbit_dct.keys()))
+            for orbit in orbit_dct.keys():
+                orbit_list = orbit_dct.get(orbit, [])
+                print('Found {} ACQ-lists over aoi: {} & track: {} & orbit: {}'.format(len(orbit_list), aoi.get('_source').get('id'), track, orbit))
+                print('Evaluating GUNWs and Acquisitions over track: {} and orbit: {}'.format(track, orbit))
                 # get all full_id_hashes in the acquisition list
                 all_hashes = [get_hash(x) for x in orbit_list]
+                print('all relevant hashes over AOI: {}'.format(', '.join(all_hashes)))
                 # if all of them are in the list of gunw hashes, they are complete
                 complete = True
                 for full_id_hash in all_hashes:
-                    if not hashed_gunw_dct.get(full_id_hash, False):
+                    if hashed_gunw_dct.get(full_id_hash, False) is False:
                         complete = False
+                        print('hash: {} is missing... incomplete.'.format(full_id_hash))
                         break
                 # they are complete. tag & generate products
-                if complete:
-                    self.tag_and_publish(orbit_list, aoi)
+                if complete: 
+                    gunw_list = [hashed_gunw_dct.get(x) for x in all_hashes]
+                    print('found {} products complete over aoi: {} for track: {} and orbit: {}'.format(len(gunw_list), aoi.get('_id'), track, orbit))
+                    self.tag_and_publish(gunw_list, aoi)
 
     def tag_and_publish(self, gunws, aoi):
         '''tags each object in the input list, then publishes an appropriate
@@ -122,8 +138,8 @@ class evaluate():
         if len(gunws) < 1:
             return
         for obj in gunws:
-            tag = aoi.get('_id')
-            uid = obj.get('_id')
+            tag = aoi.get('_source').get('id')
+            uid = obj.get('_source').get('id')
             prod_type = obj.get('_type')
             index = obj.get('_index')
             tagger.add_tag(index, uid, prod_type, tag)
@@ -137,7 +153,7 @@ class evaluate():
         location = aoi.get('_source', {}).get('location', False)
         audit_dct = sort_by_hash(audit_trail_list)
         matching = []
-        all_acq_lists = get_objects('S1-GUNW-acqlist', starttime=start, endtime=end, location=location)
+        all_acq_lists = get_objects('S1-GUNW-acq-list', starttime=start, endtime=end, location=location)
         for acq_list in all_acq_lists:
             if audit_dct.get(get_hash(acq_list), False):
                 matching.append(acq_list)
@@ -163,7 +179,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if full_id_hash:
             must.append({"term": {"metadata.full_id_hash.raw": full_id_hash}})
         if track_number:
-            must.append({"term": {"metadata.track_number": full_id_hash}})
+            must.append({"term": {"metadata.track_number": track_number}})
         if version:
             must.append({"term": {"version.raw": version}})
         if uid:
@@ -175,7 +191,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
     else:
         grq_query = {"query": {"bool":{"must": must}}}
-    print(grq_query)
+    #print(grq_query)
     results = query_es(grq_url, grq_query)
     print('found {} {} products matching query.'.format(len(results), prod_type))
     # if it's an orbit, filter out the bad orbits client-side
@@ -198,7 +214,7 @@ def print_query(prod_type, location=False, starttime=False, endtime=False, full_
     if track_number:
         statement += '\nwith track_number: {}'.format(track_number)
     if orbit_numbers:
-        statement += '\nwith orbits:       {}'.format(', '.join(orbit_numbers))
+        statement += '\nwith orbits:       {}'.format(', '.join([str(x) for x in orbit_numbers]))
     if version:
         statement += '\nwith version:      {}'.format(version)
     if uid:
@@ -253,7 +269,7 @@ def sort_by_orbit(es_result_list):
     for result in es_result_list:
         orbit = get_orbit(result)
         if orbit in sorted_dict.keys():
-            sorted_dict.get(orbit, []).append(result)
+            sorted_dict[orbit].append(result)
         else:
             sorted_dict[orbit] = [result]
     return sorted_dict
@@ -322,7 +338,7 @@ def get_orbit(es_obj):
     '''returns the orbit as a string from the elasticsearch object'''
     es_ds = es_obj.get('_source', {})
     #iterate through ds
-    options = ['orbit', 'orbitNumber', 'orbit_number']
+    options = ['orbit_number', 'orbitNumber', 'orbit']
     for tkey in options:
         orbit = es_ds.get(tkey, False)
         if orbit:
