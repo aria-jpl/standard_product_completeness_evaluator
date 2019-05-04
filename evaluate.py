@@ -179,7 +179,7 @@ class evaluate():
         prod_type = 'S1-GUNW-AOI_TRACK'
         if gunw_type is 'S1-GUNW-MERGED':
             prod_type = 'S1-GUNW-MERGED-AOI_TRACK'
-        matches = get_objects(gunw_type, track_number=get_track(gunw), orbit_numbers=gunw.get('_source').get('metadata').get('orbit_number'), aoi=aoi_id)
+        matches = get_objects(prod_type, track_number=get_track(gunw), orbit_numbers=gunw.get('_source').get('metadata').get('orbit_number'), aoi=aoi_id)
         if matches:
             return True
         return False
