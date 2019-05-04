@@ -14,6 +14,9 @@ def add_tag(index, uid, prod_type, tag):
         tag_list = [] #tag is empty, remova ll tags
     else:
         existing_tags = get_current_tags(uid, prod_type, index)
+        if not tag is False and tag in existing_tags:
+            print('tag: {} already in tags for: {}'.format(tag, uid))
+            return
         tag_list = tag.split(',')
         if not type(existing_tags) is list:
             existing_tags = []
