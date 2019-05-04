@@ -104,14 +104,11 @@ class evaluate():
         '''determines which gunws (or gunw-merged) products are complete along track & orbit,
         tags and publishes TRACK_AOI products for those that are complete'''
         complete = []
-        print('acq-lists: {}'.format(json.dumps(acq_lists)))
         hashed_gunw_dct = sort_by_hash(gunws)
         track_dct = sort_by_track(acq_lists)
-        print('all known tracks: {}'.format(track_dct.keys()))
         for track in track_dct.keys():
             track_list = track_dct.get(track, [])
             orbit_dct = sort_by_orbit(track_list)
-            print('all known current orbit pairs: {}'.format(orbit_dct.keys()))
             for orbit in orbit_dct.keys():
                 orbit_list = orbit_dct.get(orbit, [])
                 print('Found {} ACQ-lists over aoi: {} & track: {} & orbit: {}'.format(len(orbit_list), aoi.get('_source').get('id'), track, orbit))
@@ -124,7 +121,7 @@ class evaluate():
                 for full_id_hash in all_hashes:
                     if hashed_gunw_dct.get(full_id_hash, False) is False:
                         complete = False
-                        print('hash: {} is missing... incomplete.'.format(full_id_hash))
+                        print('hash: {} is missing... products are incomplete.'.format(full_id_hash))
                         break
                 # they are complete. tag & generate products
                 if complete: 
