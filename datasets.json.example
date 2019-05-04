@@ -1,5 +1,4 @@
     {
-
       "ipath": "ariamh::data/s1-gunw-aoi-track",
       "match_pattern": "/(?P<id>S1-GUNW-AOI_TRACK.*)$",
       "alt_match_pattern": null,

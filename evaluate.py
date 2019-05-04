@@ -130,7 +130,9 @@ class evaluate():
                         break
                 # they are complete. tag & generate products
                 if complete:
-                    gunw_list = [hashed_gunw_dct.get(x) for x in all_hashes]
+                    gunw_list = []
+                    for hsh in all_hashes:
+                        gunw_list.extend(hashed_gunw_dct.get(hsh))
                     print('found {} products complete over aoi: {} for track: {} and orbit: {}'.format(len(gunw_list), aoi.get('_id'), track, orbit))
                     self.tag_and_publish(gunw_list, aoi)
 
@@ -142,6 +144,7 @@ class evaluate():
         if self.aoi_track_is_published(gunws, aoi.get('_source').get('id')):
             print('AOI_TRACK product is already published... skipping.')
             return
+        print('AOI_TRACK product has not been published. Publishing product...')
         for obj in gunws:
             tag = aoi.get('_source').get('id')
             uid = obj.get('_source').get('id')
@@ -171,7 +174,7 @@ class evaluate():
         prod_type = 'S1-GUNW-AOI_TRACK'
         if gunw_type is 'S1-GUNW-MERGED':
             prod_type = 'S1-GUNW-MERGED-AOI_TRACK'
-        matches = get_objects('S1-GUNW-merged-completed', track_number=get_track(gunw), orbit_numbers=get_orbit(gunw), aoi=aoi_id)
+        matches = get_objects(gunw_type, track_number=get_track(gunw), orbit_numbers=gunw.get('_source').get('metadata').get('orbit_number'), aoi=aoi_id)
         if matches:
             return True
         return False
