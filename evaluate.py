@@ -89,7 +89,7 @@ class evaluate():
             aoi = aois[0]
             # get all audit-trail products that match orbit and track
             audit_trail_list = audit_by_aoi.get(aoi_id, [])
-            matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, location=aoi.get('_source').get('location'))
+            matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
             print('Found {} audit trail products matching track: {}'.format(len(matching_audit_trail_list), self.track_number))
             #get all acq-list products that match the audit trail
             acq_lists = self.get_matching_acq_lists(aoi, matching_audit_trail_list)
@@ -115,6 +115,7 @@ class evaluate():
                 print('Evaluating GUNWs and Acquisitions over track: {} and orbit: {}'.format(track, orbit))
                 # get all full_id_hashes in the acquisition list
                 all_hashes = [get_hash(x) for x in orbit_list]
+                print('all relevant ids over AOI: {}'.format(', '.join([x.get('_source').get('id') for x in orbit_list])))
                 print('all relevant hashes over AOI: {}'.format(', '.join(all_hashes)))
                 # if all of them are in the list of gunw hashes, they are complete
                 complete = True
