@@ -4,7 +4,7 @@
 Input are either an AOI or a GUNW/GUNW-merged. For a given input product, determines which GUNWs/GUNW merged
 are complete along track over the AOI (or, if a GUNW, any AOIs). If there are complete
 products, it tags the product with <aoi_name> tag, and creates an AOI_TRACK product
-for all GUNWs along that track/orbit pairing. 
+for all GUNWs along that track/orbit pairing.
 '''
 
 from __future__ import print_function
@@ -63,10 +63,12 @@ class evaluate():
         # retrieve all gunws, & gunw-merged products over an aoi
         s1_gunw = get_objects('S1-GUNW', location=self.location, starttime=self.starttime, endtime=self.endtime)
         s1_gunw_merged = get_objects('S1-GUNW-MERGED', location=self.location, starttime=self.starttime, endtime=self.endtime)
-        # get all acq-list products over the aoi
-        acq_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
+        # get all audit_trail products over the aoi
+        audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
         # get the full aoi product
         aoi = get_objects('area_of_interest', uid=self.uid, version=self.version)
+        # get the matching acquisition list products
+        acq_list = self.get_matching_acq_lists(aoi, audit_trail_list)
         for gunw_list in [s1_gunw, s1_gunw_merged]:
             # evaluate to see which products are complete, tagging and publishing complete products
             self.gen_completed(gunw_list, acq_list, aoi)
@@ -74,12 +76,12 @@ class evaluate():
     def run_gunw_evaluation(self):
         '''runs the evaluation and publishing for a gunw or gunw-merged'''
         # determine which AOI(s) the gunw corresponds to
-        all_acq_lists = get_objects('S1-GUNW-acq-list', full_id_hash=self.full_id_hash) 
-        acq_by_aoi = sort_by_aoi(all_acq_lists)
-        for aoi_id in acq_by_aoi.keys():
+        all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
+        audit_by_aoi = sort_by_aoi(all_audit_trail)
+        for aoi_id in audit_by_aoi.keys():
             print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
-            # get all acq-list products
-            acq_lists = acq_by_aoi.get(aoi_id, [])
+            # get all audit-trail products
+            audit_trail_list = audit_by_aoi.get(aoi_id, [])
             # get the aoi product
             aois = get_objects('area_of_interest', uid=aoi_id)
             if len(aois) > 1:
@@ -88,6 +90,8 @@ class evaluate():
                 warnings.warn('unable to find referenced AOI: {}'.format(aoi_id))
                 continue
             aoi = aois[0]
+            #get all acq-list products that match the audit trail
+            acq_lists = self.get_matching_acq_lists(aoi, audit_trail_list)
             # get all associated gunw or gunw-merged products
             gunws = get_objects(self.prod_type, track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
             # evaluate to determine which products are complete, tagging & publishing complete products
@@ -125,6 +129,21 @@ class evaluate():
             tagger.add_tag(index, uid, prod_type, tag)
         build_validated_product.build(gunws, AOI_TRACK_VERSION, AOI_TRACK_PREFIX, aoi, get_track(gunws[0]), get_orbit(gunws[0]))
 
+    def get_matching_acq_lists(self, aoi, audit_trail_list):
+        '''returns all acquisition lists matching the audit trail products under the given aoi'''
+        aoi_met = aoi.get('_source', {}).get('metadata', {})
+        start = aoi_met.get('starttime', False)
+        end = aoi_met.get('endtime', False)
+        location = aoi.get('_source', {}).get('location', False)
+        audit_dct = sort_by_hash(audit_trail_list)
+        matching = []
+        all_acq_lists = get_objects('S1-GUNW-acqlist', starttime=start, endtime=end, location=location)
+        for acq_list in all_acq_lists:
+            if audit_dct.get(get_hash(acq_list), False):
+                matching.append(acq_list)
+        return matching
+
+
 def get_objects(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
     '''returns all objects of the object type that intersect both
     temporally and spatially with the aoi'''
@@ -142,7 +161,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if endtime:
             must.append({"range": {"starttime": {"from": endtime}}})
         if full_id_hash:
-            must.append({"term": {"metadata.full_id_hash": full_id_hash}})
+            must.append({"term": {"metadata.full_id_hash.raw": full_id_hash}})
         if track_number:
             must.append({"term": {"metadata.track_number": full_id_hash}})
         if version:
@@ -152,7 +171,11 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if aoi:
             must.append({"term": {"metadata.aoi": aoi}})
         filtered["filter"] = {"bool":{"must":must}}
-    grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
+    if location:
+        grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
+    else:
+        grq_query = {"query": {"bool":{"must": must}}}
+    print(grq_query)
     results = query_es(grq_url, grq_query)
     print('found {} {} products matching query.'.format(len(results), prod_type))
     # if it's an orbit, filter out the bad orbits client-side
@@ -325,8 +348,8 @@ def gen_hash(es_obj):
     met = es_obj.get('_source', {}).get('metadata', {})
     master_slcs = met.get('master_scenes', met.get('reference_scenes', False))
     slave_slcs = met.get('slave_scenes', met.get('secondary_scenes', False))
-    master_ids_str=""
-    slave_ids_str=""
+    master_ids_str = ""
+    slave_ids_str = ""
     for slc in sorted(master_slcs):
         if isinstance(slc, tuple) or isinstance(slc, list):
             slc = slc[0]
