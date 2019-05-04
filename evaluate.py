@@ -145,14 +145,15 @@ class evaluate():
                     if hashed_gunw_dct.get(full_id_hash, False) is False:
                         complete = False
                         missing_hashes.append(full_id_hash)
-                        print('hash: {} is missing... products are incomplete.'.format(full_id_hash))
+                        #print('hash: {} is missing... products are incomplete.'.format(full_id_hash))
                         incomplete_acq_lists.append(hashed_acq_dct.get(full_id_hash))
                     else:
                         complete_acq_lists.append(hashed_acq_dct.get(full_id_hash))
                 print('found {} complete and {} missing hashes.'.format(len(complete_acq_lists), len(incomplete_acq_lists)))
-                print('missing hashes: {}'.format(', '.join(missing_hashes)))
+                if not complete:
+                    print('missing hashes: {}'.format(', '.join(missing_hashes)))
                 # tag acq-lists if iterating over gunws (not gunw merged')
-                if orbit_list[0].get('_type', False) == 'S1-GUNW':
+                if gunws[0].get('_type', False) == 'S1-GUNW':
                     print('tagging acq-lists appropriately')
                     for obj in complete_acq_lists:
                         self.tag_obj(obj, 'gunw_generated')
@@ -247,8 +248,8 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
     else:
         grq_query = {"query": {"bool":{"must": must}}}
-    print(grq_url)
-    print(grq_query)
+    #print(grq_url)
+    #print(grq_query)
     results = query_es(grq_url, grq_query)
     print('found {} {} products matching query.'.format(len(results), prod_type))
     # if it's an orbit, filter out the bad orbits client-side
