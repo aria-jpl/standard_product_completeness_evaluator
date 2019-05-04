@@ -11,11 +11,14 @@ from __future__ import print_function
 import re
 import json
 import hashlib
+import urllib3
 import requests
 import warnings
 from hysds.celery import app
 import tagger
 import build_validated_product
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 AOI_TRACK_PREFIX = 'S1-GUNW-AOI_TRACK'
 AOI_TRACK_VERSION = 'v2.0'
@@ -126,7 +129,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     '''returns all objects of the object type that intersect both
     temporally and spatially with the aoi'''
     idx = INDEX_MAPPING.get(prod_type) # mapping of the product type to the index
-    print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False)
+    print_query(prod_type, location, starttime, endtime, full_id_hash, track_number, orbit_numbers, version, uid, aoi)
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
     filtered = {}
