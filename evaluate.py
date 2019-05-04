@@ -165,9 +165,9 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if track_number:
             must.append({"term": {"metadata.track_number": full_id_hash}})
         if version:
-            must.append({"term": {"version": version}})
+            must.append({"term": {"version.raw": version}})
         if uid:
-            must.append({"term": {"id": uid}})
+            must.append({"term": {"id.raw": uid}})
         if aoi:
             must.append({"term": {"metadata.aoi": aoi}})
         filtered["filter"] = {"bool":{"must":must}}
