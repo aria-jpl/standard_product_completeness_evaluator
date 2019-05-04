@@ -154,7 +154,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     filtered = {}
     if location:
         filtered["query"] = {"geo_shape": {"location": {"shape": location}}}
-    if starttime or endtime or full_id_hash or track_number or version:
+    if starttime or endtime or full_id_hash or track_number or version or uid or aoi:
         must = []
         if starttime:
             must.append({"range": {"endtime": {"from": starttime}}})
@@ -203,7 +203,7 @@ def print_query(prod_type, location=False, starttime=False, endtime=False, full_
         statement += '\nwith version:      {}'.format(version)
     if uid:
         statement += '\nwith uid:          {}'.format(uid)
-    if uid:
+    if aoi:
         statement += '\nwith metadata.aoi: {}'.format(aoi)
     print(statement)
 
