@@ -7,6 +7,7 @@ Builds s1-gunw-aoi-track and s1-gunw-aoi-track-merged products
 from __future__ import print_function
 import os
 import json
+import pytz
 import shutil
 import pickle
 import hashlib
@@ -37,15 +38,41 @@ def build_id(version, product_prefix, aoi, track, orbit, date_pair):
     uid = '{}-{}-T{}-{}-{}'.format(product_prefix, aoi.get('_id', 'AOI'), str(track).zfill(3), date_pair, version)
     return uid
 
-def gen_hash(es_object):
-    '''Generates a hash from the master and slave scene list'''
-    master = pickle.dumps(sorted(es_object['_source']['metadata']['master_scenes']))
-    slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes']))
-    return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+def get_hash(es_obj):
+    '''retrieves the full_id_hash. if it doesn't exists, it
+        attempts to generate one'''
+    full_id_hash = es_obj.get('_source', {}).get('metadata', {}).get('full_id_hash', False)
+    if full_id_hash:
+        return full_id_hash
+    return gen_hash(es_obj)
+
+def gen_hash(es_obj):
+    '''copy of hash used in the enumerator'''
+    met = es_obj.get('_source', {}).get('metadata', {})
+    master_slcs = met.get('master_scenes', met.get('reference_scenes', False))
+    slave_slcs = met.get('slave_scenes', met.get('secondary_scenes', False))
+    master_ids_str = ""
+    slave_ids_str = ""
+    for slc in sorted(master_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if master_ids_str == "":
+            master_ids_str = slc
+        else:
+            master_ids_str += " "+slc
+    for slc in sorted(slave_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if slave_ids_str == "":
+            slave_ids_str = slc
+        else:
+            slave_ids_str += " "+slc
+    id_hash = hashlib.md5(json.dumps([master_ids_str, slave_ids_str]).encode("utf8")).hexdigest()
+    return id_hash
 
 def get_times(ifg_list, minimum=True):
     '''returns the minimum or the maximum start/end time'''
-    times = [dateutil.parser.parse(get_secondary_time(x)) for x in ifg_list] + [dateutil.parser.parse(get_reference_time(x)) for x in ifg_list]
+    times = [dateutil.parser.parse(get_secondary_time(x)).replace(tzinfo=pytz.UTC) for x in ifg_list] + [dateutil.parser.parse(get_reference_time(x)).replace(tzinfo=pytz.UTC) for x in ifg_list]
     if minimum:
         time = min(times)
     else:
@@ -54,7 +81,7 @@ def get_times(ifg_list, minimum=True):
 
 def get_secondary_time(obj):
     '''attempts to return proper dates for an object'''
-    date = obj.get('_source', {}).get('metadata', {}).get('secondary_date', [])
+    date = obj.get('_source', {}).get('metadata', {}).get('secondary_date', False)
     if date:
         return date
     # secondary doesn't exist
@@ -78,7 +105,9 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Generates the ds dict'''
     starttime = get_times(ifg_list, minimum = True)
     endtime = get_times(ifg_list, minimum = False)
-    date_pair = '{}_{}'.format(starttime[:10].replace('-', ''), endtime[:10].replace('-',''))    
+    date_pair = '{}_{}'.format(starttime[:10].replace('-', ''), endtime[:10].replace('-',''))
+    if starttime == endtime:
+        date_pair = orbit
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
