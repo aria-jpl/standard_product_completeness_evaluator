@@ -156,11 +156,23 @@ class evaluate():
                 if gunws[0].get('_type', False) == 'S1-GUNW':
                     print('tagging acq-lists appropriately')
                     for obj in complete_acq_lists:
-                        self.remove_obj_tag(obj, 'gunw_missing')
-                        self.tag_obj(obj, 'gunw_generated')
+                        tags = obj.get('_source', {}).get('metadata', {}).get('tags', [])
+                        uid = obj.get('_source', {}).get('id', False)
+                        if 'gunw_missing' in tags:
+                            print('removing tag: "gunw_missing" from: {}'.format(uid))
+                            self.remove_obj_tag(obj, 'gunw_missing')
+                        if not 'gunw_generated' in tags:
+                            print('adding tag: "gunw_generated" to: {}'.format(uid))
+                            self.tag_obj(obj, 'gunw_generated')
                     for obj in incomplete_acq_lists:
-                        self.remove_obj_tag(obj, 'gunw_generated')
-                        self.tag_obj(obj, 'gunw_missing')
+                        tags = obj.get('_source', {}).get('metadata', {}).get('tags', [])
+                        uid = obj.get('_source', {}).get('id', False)
+                        if 'gunw_generated' in tags:
+                            print('removing tag: "gunw_generated" from: {}'.format(uid))
+                            self.remove_obj_tag(obj, 'gunw_generated')
+                        if not 'gunw_missing' in tags:
+                            print('adding tag: "gunw_missing" to: {}'.format(uid))
+                            self.tag_obj(obj, 'gunw_missing')
                 # they are complete. tag & generate products
                 if complete:
                     gunw_list = []
