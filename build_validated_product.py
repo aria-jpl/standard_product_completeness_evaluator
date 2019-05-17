@@ -127,6 +127,7 @@ def build_met(ifg_list, version, product_prefix, aoi, track, orbit):
     s1_gunw_ids = []
     s1_gunws = []
     s1_gunw_urls = []
+    hashes = [get_hash(x) for x in ifg_list]
     for ifg in ifg_list:
         ifg_id = ifg.get('_id')
         s1_gunw_ids.append(ifg_id)
@@ -144,7 +145,8 @@ def build_met(ifg_list, version, product_prefix, aoi, track, orbit):
         dct = {'id': ifg_id, 'master_slcs':master_slcs, 'slave_slcs':slave_slcs, 'master_scenes': master_scenes, 'url': url,
                'slave_scenes':slave_scenes, 'master_orbit_file':master_orbit_file, 'slave_orbit_file': slave_orbit_file}
         s1_gunws.append(dct)
-    met = {'track_number': track, 'aoi': aoi.get('_id'), 'date_pair': date_pair, 'orbit': orbits, 's1-gunw-ids': s1_gunw_ids, 's1-gunws': s1_gunws, 's1-gunw_urls': s1_gunw_urls}
+    met = {'track_number': track, 'aoi': aoi.get('_id'), 'date_pair': date_pair, 'orbit': orbits,
+           's1-gunw-ids': s1_gunw_ids, 's1-gunws': s1_gunws, 's1-gunw_urls': s1_gunw_urls, 'full_id_hash': hashes}
     return met
 
 def get_location(ifg_list):
