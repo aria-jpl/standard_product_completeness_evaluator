@@ -260,11 +260,11 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     #print(grq_url)
     #print(grq_query)
     results = query_es(grq_url, grq_query)
-    print('found {} {} products matching query.'.format(len(results), prod_type))
     # if it's an orbit, filter out the bad orbits client-side
     if orbit_numbers:
         orbit_key = stringify_orbit(orbit_numbers)
         results = sort_by_orbit(results).get(orbit_key, [])
+    print('found {} {} products matching query.'.format(len(results), prod_type))
     return results
 
 def print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
