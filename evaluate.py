@@ -250,6 +250,16 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
             must.append({"term": {"version.raw": version}})
         if uid:
             must.append({"term": {"id.raw": uid}})
+        if orbit_numbers:
+            #determine the proper field type & append all orbits
+            orbit_term = resolve_orbit_field(prod_type)
+            if isinstance(orbit_term, list):
+                # reference/secondary orbits which need to be specified separately
+                must.append({"term":{"metadata.{}".format(orbit_term[0]): sorted(orbit)[0]}})
+                must.append({"term":{"metadata.{}".format(orbit_term[1]): sorted(orbit)[1]}})
+            else:
+                for orbit in orbit_numbers:
+                    must.append({"term":{"metadata.{}".format(orbit_term): orbit}})
         if aoi:
             must.append({"term": {"metadata.aoi.raw": aoi}})
         filtered["filter"] = {"bool":{"must":must}}
@@ -261,9 +271,9 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     #print(grq_query)
     results = query_es(grq_url, grq_query)
     # if it's an orbit, filter out the bad orbits client-side
-    if orbit_numbers:
-        orbit_key = stringify_orbit(orbit_numbers)
-        results = sort_by_orbit(results).get(orbit_key, [])
+    #if orbit_numbers:
+    #    orbit_key = stringify_orbit(orbit_numbers)
+    #    results = sort_by_orbit(results).get(orbit_key, [])
     print('found {} {} products matching query.'.format(len(results), prod_type))
     return results
 
@@ -473,6 +483,16 @@ def get_most_recent(obj1, obj2):
     if ctime1 > ctime2:
         return obj1
     return obj2
+
+def resolve_orbit_field(prod_type):
+    '''resolves the orbit metadata field by product type'''
+    orbit_mapping = {'S1-GUNW-acq-list': 'orbitNumber',
+                 'S1-GUNW':'orbit_number',
+                 'S1-GUNW-MERGED': 'orbit_number',
+                 'S1-GUNW-acqlist-audit_trail': ['secondary_orbit.raw', 'reference_orbit.raw'],
+                 'S1-GUNW-AOI_TRACK': 'orbit',
+                 'S1-GUNW-MERGED-AOI_TRACK': 'orbit'}
+    return orbit_mapping.get(prod_type, False)
 
 def stringify_orbit(orbit_list):
     '''converts the list into a string'''
