@@ -32,6 +32,7 @@ INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
                  'S1-GUNW-acqlist-audit_trail': 'grq_*_s1-gunw-acqlist-audit_trail',
                  'S1-GUNW-AOI_TRACK': 'grq_*_s1-gunw-aoi_track',
                  'S1-GUNW-MERGED-AOI_TRACK': 'grq_*_s1-gunw-merged-aoi_track',
+                 'S1-GUNW-GREYLIST': 'grq_*_s1-gunw-greylist',
                  'area_of_interest': 'grq_*_area_of_interest'}
 
 class evaluate():
@@ -68,6 +69,8 @@ class evaluate():
         s1_gunw_merged = get_objects('S1-GUNW-MERGED', location=self.location, starttime=self.starttime, endtime=self.endtime)
         # get all audit_trail products over the aoi
         audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
+        # get all greylist hashes
+        greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST', location=self.location)).keys() 
         # get the full aoi product
         aois = get_objects('area_of_interest', uid=self.uid, version=self.version)
         if len(aois) > 1:
@@ -76,7 +79,7 @@ class evaluate():
             raise Exception('unable to find referenced AOI: {}'.format(self.uid))
         aoi = aois[0]
         # get the matching acquisition list products
-        acq_list = self.get_matching_acq_lists(aoi, audit_trail_list)
+        acq_list = self.get_matching_acq_lists(aoi, audit_trail_list, greylist_hashes)
         for gunw_list in [s1_gunw, s1_gunw_merged]:
             # evaluate to see which products are complete, tagging and publishing complete products
             self.gen_completed(gunw_list, acq_list, aoi)
@@ -88,6 +91,8 @@ class evaluate():
             print('attempting to fill hash for submitted product...')
             self.full_id_hash = gen_hash(get_objects(self.prod_type, uid=self.uid)[0])
             print('Found hash {}'.format(self.full_id_hash))
+        # get all the greylists
+        greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys()
         # determine which AOI(s) the gunw corresponds to
         all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
         audit_by_aoi = sort_by_aoi(all_audit_trail)
@@ -106,7 +111,7 @@ class evaluate():
             if len(matching_audit_trail_list) < 1:
                 continue
             #get all acq-list products that match the audit trail
-            acq_lists = self.get_matching_acq_lists(aoi, matching_audit_trail_list)
+            acq_lists = self.get_matching_acq_lists(aoi, matching_audit_trail_list, greylist_hashes)
             if len(acq_lists) < 1:
                 print('Found {} acq-lists.'.format(len(acq_lists)))
                 continue
@@ -212,7 +217,7 @@ class evaluate():
         index = obj.get('_index')
         tagger.remove_tag(index, uid, prod_type, tag)
 
-    def get_matching_acq_lists(self, aoi, audit_trail_list):
+    def get_matching_acq_lists(self, aoi, audit_trail_list, greylist_hashes):
         '''returns all acquisition lists matching the audit trail products under the given aoi'''
         aoi_met = aoi.get('_source', {}).get('metadata', {})
         start = aoi_met.get('starttime', False)
@@ -222,7 +227,8 @@ class evaluate():
         matching = []
         all_acq_lists = get_objects('S1-GUNW-acq-list', starttime=start, endtime=end, location=location)
         for acq_list in all_acq_lists:
-            if audit_dct.get(get_hash(acq_list), False):
+            hsh = get_hash(acq_list)
+            if audit_dct.get(hsh, False) and hsh not in greylist_hashes:
                 matching.append(acq_list)
         return matching
 
@@ -267,8 +273,8 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
             orbit_term = resolve_orbit_field(prod_type)
             if isinstance(orbit_term, list):
                 # reference/secondary orbits which need to be specified separately
-                must.append({"term":{"metadata.{}".format(orbit_term[0]): sorted(orbit)[0]}})
-                must.append({"term":{"metadata.{}".format(orbit_term[1]): sorted(orbit)[1]}})
+                must.append({"term":{"metadata.{}".format(orbit_term[0]): sorted(orbit_numbers)[0]}})
+                must.append({"term":{"metadata.{}".format(orbit_term[1]): sorted(orbit_numbers)[1]}})
             else:
                 for orbit in orbit_numbers:
                     must.append({"term":{"metadata.{}".format(orbit_term): orbit}})
