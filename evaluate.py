@@ -25,7 +25,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 AOI_TRACK_PREFIX = 'S1-GUNW-AOI_TRACK'
 AOI_TRACK_MERGED_PREFIX = 'S1-GUNW-MERGED-AOI_TRACK'
 AOI_TRACK_VERSION = 'v2.0'
-ALLOWED_PROD_TYPES = ['S1-GUNW', "S1-GUNW-MERGED", "area_of_interest"]
+ALLOWED_PROD_TYPES = ['S1-GUNW', "S1-GUNW-MERGED", "area_of_interest", "S1-GUNW-GREYLIST"]
 INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
                  'S1-GUNW':'grq_*_s1-gunw',
                  'S1-GUNW-MERGED': 'grq_*_s1-*-merged',
@@ -59,6 +59,8 @@ class evaluate():
         # run evaluation & publishing by job type
         if self.prod_type == 'area_of_interest':
             self.run_aoi_evaluation()
+        elif self.prod_type == 'S1-GUNW-GREYLIST':
+            self.run_greylist_evaluation()
         else:
             self.run_gunw_evaluation()
 
@@ -83,6 +85,44 @@ class evaluate():
         for gunw_list in [s1_gunw, s1_gunw_merged]:
             # evaluate to see which products are complete, tagging and publishing complete products
             self.gen_completed(gunw_list, acq_list, aoi)
+
+    def run_greylist_evaluation(self):
+        '''runs the evaluation and publishing for a greylist'''
+        # fill the hash if it doesn't exist
+        if self.full_id_hash is False:
+            print('attempting to fill hash for submitted product...')
+            self.full_id_hash = gen_hash(get_objects(self.prod_type, uid=self.uid)[0])
+            print('Found hash {}'.format(self.full_id_hash))
+        # get all the greylists
+        greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys()
+        # determine which AOI(s) the gunw corresponds to
+        all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
+        audit_by_aoi = sort_by_aoi(all_audit_trail)
+        for aoi_id in audit_by_aoi.keys():
+            print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
+            aois = get_objects('area_of_interest', uid=aoi_id)
+            if len(aois) > 1:
+                raise Exception('unable to distinguish between multiple AOIs with same uid but different version: {}}'.format(aoi_id))
+            if len(aois) == 0:
+                warnings.warn('unable to find referenced AOI: {}'.format(aoi_id))
+                continue
+            aoi = aois[0]
+            # get all audit-trail products that match orbit and track
+            matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
+            print('Found {} audit trail products matching track: {}'.format(len(matching_audit_trail_list), self.track_number))
+            if len(matching_audit_trail_list) < 1:
+                continue
+            #get all acq-list products that match the audit trail
+            acq_lists = self.get_matching_acq_lists(aoi, matching_audit_trail_list, greylist_hashes)
+            if len(acq_lists) < 1:
+                print('Found {} acq-lists.'.format(len(acq_lists)))
+                continue
+            #filter invalid orbits
+            acq_lists = sort_by_orbit(acq_lists).get(stringify_orbit(self.orbit_number))
+            # get all associated gunw or gunw-merged products
+            gunws = get_objects(self.prod_type, track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
+            # evaluate to determine which products are complete, tagging & publishing complete products
+            self.gen_completed(gunws, acq_lists, aoi)
 
     def run_gunw_evaluation(self):
         '''runs the evaluation and publishing for a gunw or gunw-merged'''

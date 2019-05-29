@@ -1,0 +1,32 @@
+{
+    "label": "Standard Product S1-GUNW - S1-GUNW Completeness Evaluator By GreyList",
+    "submission_type": "iteration",
+    "enable_dedup": false,
+    "params" : [
+    {
+      "name": "uid",
+      "from": "dataset_jpath:_source.id"
+    },
+    {
+      "name": "prod_type",
+      "from": "dataset_jpath:_source.dataset"
+    },
+    {
+      "name": "track_number",
+      "from": "dataset_jpath:_source.metadata.track_number"
+    },
+    {
+      "name": "full_id_hash",
+      "from": "dataset_jpath:_source.metadata",
+      "lambda": "lambda x: x.get('full_id_hash', False)"
+    },
+    {
+      "name": "version",
+      "from": "dataset_jpath:_source.version"
+    },
+    {
+      "name": "orbit_number",
+      "from": "dataset_jpath:_source.metadata.orbit_number"
+    }
+    ]
+}
