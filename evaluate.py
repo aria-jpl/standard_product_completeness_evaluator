@@ -252,6 +252,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
     filtered = {}
+    must = []
     if location:
         filtered["query"] = {"geo_shape": {"location": {"shape": location}}}
     if starttime or endtime or full_id_hash or track_number or version or uid or aoi:
