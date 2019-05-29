@@ -25,6 +25,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 AOI_TRACK_PREFIX = 'S1-GUNW-AOI_TRACK'
 AOI_TRACK_MERGED_PREFIX = 'S1-GUNW-MERGED-AOI_TRACK'
 AOI_TRACK_VERSION = 'v2.0'
+S1_GUNW_VERSION = "v2.0.2"
+
 ALLOWED_PROD_TYPES = ['S1-GUNW', "S1-GUNW-MERGED", "area_of_interest", "S1-GUNW-GREYLIST"]
 INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
                  'S1-GUNW':'grq_*_s1-gunw',
@@ -49,6 +51,7 @@ class evaluate():
         self.endtime = self.ctx.get('endtime', False)
         self.version = self.ctx.get('version', False)
         self.orbit_number = self.ctx.get('orbit_number', False)
+        self.s1_gunw_version = self.ctx.get("S1-GUNW-version", S1_GUNW_VERSION)
         # exit if invalid input product type
         if not self.prod_type in ALLOWED_PROD_TYPES:
             raise Exception('input product type: {} not in allowed product types for PGE'.format(self.prod_type))
@@ -120,7 +123,9 @@ class evaluate():
             #filter invalid orbits
             acq_lists = sort_by_orbit(acq_lists).get(stringify_orbit(self.orbit_number))
             # get all associated gunw or gunw-merged products
-            gunws = get_objects('S1-GUNW', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
+            gunws = get_objects('S1-GUNW', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.s1_gunw_version)
+            if len(gunws)<1:
+                raise RuntimeError("No S1-GUNW FOUND for track_number={}, orbit_numbers={}, s1-gunw-version={}".format(self.track_number, self.orbit_number, self.s1_gunw_version))
             # evaluate to determine which products are complete, tagging & publishing complete products
             self.gen_completed(gunws, acq_lists, aoi)
 

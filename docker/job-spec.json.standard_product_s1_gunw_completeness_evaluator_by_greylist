@@ -34,6 +34,10 @@
     "destination": "context"
   },
   {
+    "name": "S1-GUNW-version",
+    "destination": "context"
+  },
+  {
     "name": "orbit_number",
     "destination": "context"
   }
