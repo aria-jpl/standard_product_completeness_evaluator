@@ -26,6 +26,7 @@ AOI_TRACK_PREFIX = 'S1-GUNW-AOI_TRACK'
 AOI_TRACK_MERGED_PREFIX = 'S1-GUNW-MERGED-AOI_TRACK'
 AOI_TRACK_VERSION = 'v2.0'
 S1_GUNW_VERSION = "v2.0.2"
+S1_GUNW_MERGED_VERSION = "v2.0.2"
 
 ALLOWED_PROD_TYPES = ['S1-GUNW', "S1-GUNW-MERGED", "area_of_interest", "S1-GUNW-GREYLIST"]
 INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
@@ -52,6 +53,8 @@ class evaluate():
         self.version = self.ctx.get('version', False)
         self.orbit_number = self.ctx.get('orbit_number', False)
         self.s1_gunw_version = self.ctx.get("S1-GUNW-version", S1_GUNW_VERSION)
+        self.s1_gunw_merged_version = self.ctx.get("S1-GUNW-MERGED-version", S1_GUNW_MERGED_VERSION)
+
         # exit if invalid input product type
         if not self.prod_type in ALLOWED_PROD_TYPES:
             raise Exception('input product type: {} not in allowed product types for PGE'.format(self.prod_type))
@@ -126,10 +129,17 @@ class evaluate():
             gunws = get_objects('S1-GUNW', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.s1_gunw_version)
             if len(gunws)<1:
                 print("No S1-GUNW FOUND for track_number={}, orbit_numbers={}, s1-gunw-version={}".format(self.track_number, self.orbit_number, self.s1_gunw_version))
-                continue
             else:
                 # evaluate to determine which products are complete, tagging & publishing complete products
                 self.gen_completed(gunws, acq_lists, aoi)
+
+            gunws-merged = get_objects('S1-GUNW-MERGED', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.s1_gunw_merged_version)
+            if len(gunws-merged)<1:
+                print("No S1-GUNW-MERGED FOUND for track_number={}, orbit_numbers={}, s1-gunw-version={}".format(self.track_number, self.orbit_number, self.s1_gunw_merged_version))
+            else:
+                # evaluate to determine which products are complete, tagging & publishing complete products
+                self.gen_completed(gunws-merged, acq_lists, aoi)
+
 
     def run_gunw_evaluation(self):
         '''runs the evaluation and publishing for a gunw or gunw-merged'''
