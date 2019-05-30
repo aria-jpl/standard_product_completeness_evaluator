@@ -31,6 +31,12 @@
       "default": "v2.0.2" 
     },
     {
+      "name": "S1-GUNW-MERGED-version",
+      "from": "submitter",
+      "type": "text",
+      "default": "v2.0.2"
+    },
+    {
       "name": "orbit_number",
       "from": "dataset_jpath:_source.metadata.orbit_number"
     }

@@ -38,6 +38,10 @@
     "destination": "context"
   },
   {
+    "name": "S1-GUNW-MERGED-version",
+    "destination": "context"
+  },
+  {
     "name": "orbit_number",
     "destination": "context"
   }
