@@ -133,12 +133,12 @@ class evaluate():
                 # evaluate to determine which products are complete, tagging & publishing complete products
                 self.gen_completed(gunws, acq_lists, aoi)
 
-            gunws-merged = get_objects('S1-GUNW-MERGED', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.s1_gunw_merged_version)
-            if len(gunws-merged)<1:
+            gunws_merged = get_objects('S1-GUNW-MERGED', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.s1_gunw_merged_version)
+            if len(gunws_merged)<1:
                 print("No S1-GUNW-MERGED FOUND for track_number={}, orbit_numbers={}, s1-gunw-version={}".format(self.track_number, self.orbit_number, self.s1_gunw_merged_version))
             else:
                 # evaluate to determine which products are complete, tagging & publishing complete products
-                self.gen_completed(gunws-merged, acq_lists, aoi)
+                self.gen_completed(gunws_merged, acq_lists, aoi)
 
 
     def run_gunw_evaluation(self):
