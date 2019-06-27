@@ -33,24 +33,24 @@ def get_area(coords):
     return area / 2
 
 def change_coordinate_direction(cord):
-    logger.info("change_coordinate_direction 1 cord: %s\n" %cord)
+    print("change_coordinate_direction 1 cord: %s\n" %cord)
     cord_area = util.get_area(cord)
     if not cord_area>0:
-        logger.info("change_coordinate_direction : coordinates are not clockwise, reversing it")
+        print("change_coordinate_direction : coordinates are not clockwise, reversing it")
         cord = [cord[::-1]]
-        logger.info("change_coordinate_direction 2 : cord : %s" %cord)
+        print("change_coordinate_direction 2 : cord : %s" %cord)
         try:
             cord_area = util.get_area(cord)
         except:
             cord = cord[0]
-            logger.info("change_coordinate_direction 3 : cord : %s" %cord)
+            print("change_coordinate_direction 3 : cord : %s" %cord)
             cord_area = util.get_area(cord)
         if not cord_area>0:
-            logger.info("change_coordinate_direction. coordinates are STILL NOT  clockwise")
+            print("change_coordinate_direction. coordinates are STILL NOT  clockwise")
     else:
-        logger.info("change_coordinate_direction: coordinates are already clockwise")
+        print("change_coordinate_direction: coordinates are already clockwise")
 
-    logger.info("change_coordinate_direction 4 : cord : %s" %cord)
+    print("change_coordinate_direction 4 : cord : %s" %cord)
     return cord
 
 
