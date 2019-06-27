@@ -164,12 +164,12 @@ def change_union_coordinate_direction(union_geom):
     print("Type of union polygon : %s of len %s" %(type(coordinates), len(coordinates)))
     for i in range(len(coordinates)):
         cord = coordinates[i]
-        cord_area = util.get_area(cord)
+        cord_area = get_area(cord)
         if not cord_area>0:
             print("change_coordinate_direction : coordinates are not clockwise, reversing it")
             cord = [cord[::-1]]
             print(cord)
-            cord_area = util.get_area(cord)
+            cord_area = get_area(cord)
             if not cord_area>0:
                 print("change_coordinate_direction. coordinates are STILL NOT  clockwise")
             union_geom["coordinates"][i] = cord
