@@ -18,6 +18,40 @@ from shapely.ops import cascaded_union
 from hysds.celery import app
 from hysds.dataset_ingest import ingest
 
+def get_area(coords):
+    '''get area of enclosed coordinates- determines clockwise or counterclockwise order'''
+    print("get_area : coords : %s" %coords)
+    n = len(coords) # of corners
+    area = 0.0
+    for i in range(n):
+        j = (i + 1) % n
+        #print("i : %s j: %s, coords[i][1] : %s coords[j][0] : %s coords[j][1] : %s coords[i][0] : %s"  %(i, j, coords[i][1], coords[j][0], coords[j][1], coords[i][0]))
+        area += coords[i][1] * coords[j][0]
+        area -= coords[j][1] * coords[i][0]
+    #area = abs(area) / 2.0
+    return area / 2
+
+def change_coordinate_direction(cord):
+    logger.info("change_coordinate_direction 1 cord: %s\n" %cord)
+    cord_area = util.get_area(cord)
+    if not cord_area>0:
+        logger.info("change_coordinate_direction : coordinates are not clockwise, reversing it")
+        cord = [cord[::-1]]
+        logger.info("change_coordinate_direction 2 : cord : %s" %cord)
+        try:
+            cord_area = util.get_area(cord)
+        except:
+            cord = cord[0]
+            logger.info("change_coordinate_direction 3 : cord : %s" %cord)
+            cord_area = util.get_area(cord)
+        if not cord_area>0:
+            logger.info("change_coordinate_direction. coordinates are STILL NOT  clockwise")
+    else:
+        logger.info("change_coordinate_direction: coordinates are already clockwise")
+
+    logger.info("change_coordinate_direction 4 : cord : %s" %cord)
+    return cord
+
 
 def build(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Builds and submits a aoi-track product.'''
@@ -112,6 +146,7 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
     location = shape(location)
+    location = change_coordinate_direction(location)
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
     return ds
 
