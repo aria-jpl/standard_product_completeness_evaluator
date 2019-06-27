@@ -15,6 +15,9 @@ import dateutil
 import dateutil.parser
 from shapely.geometry import shape, Polygon, MultiPolygon, mapping
 from shapely.ops import cascaded_union
+from shapely.validation import explain_validity
+import shapely.ops
+from shapely import speedups
 from hysds.celery import app
 from hysds.dataset_ingest import ingest
 #from osgeo import ogr, osr
@@ -186,10 +189,13 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
-    location2 = validate_geojson(location)
-    #location = get_union_geojson_ifgs(ifg_list)
+    try:
+        location2 = validate_geojson(location)
+        #location = get_union_geojson_ifgs(ifg_list)
+        print("location2 : {}".format(location2))
+    except Exception as err:
+        print(str(err))
     print("location : {}".format(location))
-    print("location2 : {}".format(location2))
     location = change_union_coordinate_direction(location)
     print("location : {}".format(location))
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
