@@ -17,7 +17,7 @@ from shapely.geometry import shape, Polygon, MultiPolygon, mapping
 from shapely.ops import cascaded_union
 from hysds.celery import app
 from hysds.dataset_ingest import ingest
-from osgeo import ogr, osr
+#from osgeo import ogr, osr
 
 def get_area(coords):
     '''get area of enclosed coordinates- determines clockwise or counterclockwise order'''
@@ -145,9 +145,9 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
         date_pair = orbit
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
     #print('uid: {}'.format(uid))
-    #location = get_location(ifg_list)
-    #location = shape(location)
-    location = get_union_geojson_ifgs(ifg_list)
+    location = get_location(ifg_list)
+    location = shape(location)
+    #location = get_union_geojson_ifgs(ifg_list)
     print("location : {}".format(location))
     location = change_coordinate_direction(location)
     print("location : {}".format(location))
@@ -197,6 +197,7 @@ def get_location(ifg_list):
     multi = MultiPolygon(polygons)
     return mapping(cascaded_union(multi))
 
+'''
 def get_union_geojson_ifgs(ifg_list):
     geoms = list()
     union = None
@@ -206,6 +207,7 @@ def get_union_geojson_ifgs(ifg_list):
         union = geom if union is None else union.Union(geom)
     union_geojson =  json.loads(union.ExportToJson())
     return union_geojson
+'''
 
 def build_product_dir(ds, met):
     label = ds['label']
