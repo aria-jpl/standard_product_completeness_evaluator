@@ -159,22 +159,22 @@ def validate_geojson(geojson):
             raise Exception('input geojson is not valid: {}'.format(explain_validity(shp)))
 
 def change_union_coordinate_direction(union_geom):
-    logger.info("change_coordinate_direction")
+    print("change_coordinate_direction")
     coordinates = union_geom["coordinates"]
-    logger.info("Type of union polygon : %s of len %s" %(type(coordinates), len(coordinates)))
+    print("Type of union polygon : %s of len %s" %(type(coordinates), len(coordinates)))
     for i in range(len(coordinates)):
         cord = coordinates[i]
         cord_area = util.get_area(cord)
         if not cord_area>0:
-            logger.info("change_coordinate_direction : coordinates are not clockwise, reversing it")
+            print("change_coordinate_direction : coordinates are not clockwise, reversing it")
             cord = [cord[::-1]]
-            logger.info(cord)
+            print(cord)
             cord_area = util.get_area(cord)
             if not cord_area>0:
-                logger.info("change_coordinate_direction. coordinates are STILL NOT  clockwise")
+                print("change_coordinate_direction. coordinates are STILL NOT  clockwise")
             union_geom["coordinates"][i] = cord
         else:
-            logger.info("change_coordinate_direction: coordinates are already clockwise")
+            print("change_coordinate_direction: coordinates are already clockwise")
 
     return union_geom
 
@@ -196,8 +196,12 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     except Exception as err:
         print(str(err))
     print("location : {}".format(location))
-    location = change_union_coordinate_direction(location)
-    print("location : {}".format(location))
+    try:
+        location = change_union_coordinate_direction(location)
+        print("location : {}".format(location))
+    except Exception as err:
+        print(str(err))
+
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
     return ds
 
