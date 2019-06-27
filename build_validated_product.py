@@ -136,6 +136,46 @@ def get_reference_time(obj):
         return date
     return obj.get('_source', {}).get('endtime', False)
 
+def validate_geojson(geojson):
+    '''validates the geojson and converts it into a shapely object. can accept strings, shapefiles & geojson dicts'''
+    if isinstance(geojson, str):
+        geojson = json.loads(geojson)
+    if isinstance(geojson, shapely.geometry.polygon.Polygon):
+        return geojson
+    if isinstance(geojson, shapely.geometry.multipolygon.MultiPolygon):
+        return geojson
+    shp = shape(geojson)
+    if shp.is_valid:
+        return shp
+    else:
+        shp = shp.buffer(0)# handle self-intersection
+        if shp.is_valid:
+            return shp
+        else:
+            print(type(geojson))
+            raise Exception('input geojson is not valid: {}'.format(explain_validity(shp)))
+
+def change_union_coordinate_direction(union_geom):
+    logger.info("change_coordinate_direction")
+    coordinates = union_geom["coordinates"]
+    logger.info("Type of union polygon : %s of len %s" %(type(coordinates), len(coordinates)))
+    for i in range(len(coordinates)):
+        cord = coordinates[i]
+        cord_area = util.get_area(cord)
+        if not cord_area>0:
+            logger.info("change_coordinate_direction : coordinates are not clockwise, reversing it")
+            cord = [cord[::-1]]
+            logger.info(cord)
+            cord_area = util.get_area(cord)
+            if not cord_area>0:
+                logger.info("change_coordinate_direction. coordinates are STILL NOT  clockwise")
+            union_geom["coordinates"][i] = cord
+        else:
+            logger.info("change_coordinate_direction: coordinates are already clockwise")
+
+    return union_geom
+
+
 def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Generates the ds dict'''
     starttime = get_times(ifg_list, minimum = True)
@@ -146,11 +186,11 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
-    location2 = shape(location)
+    location2 = validate_geojson(location)
     #location = get_union_geojson_ifgs(ifg_list)
     print("location : {}".format(location))
     print("location2 : {}".format(location2))
-    location = change_coordinate_direction(location[0])
+    location = change_union_coordinate_direction(location)
     print("location : {}".format(location))
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
     return ds
