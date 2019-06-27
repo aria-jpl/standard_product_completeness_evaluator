@@ -34,17 +34,17 @@ def get_area(coords):
 
 def change_coordinate_direction(cord):
     print("change_coordinate_direction 1 cord: %s\n" %cord)
-    cord_area = util.get_area(cord)
+    cord_area = get_area(cord)
     if not cord_area>0:
         print("change_coordinate_direction : coordinates are not clockwise, reversing it")
         cord = [cord[::-1]]
         print("change_coordinate_direction 2 : cord : %s" %cord)
         try:
-            cord_area = util.get_area(cord)
+            cord_area = get_area(cord)
         except:
             cord = cord[0]
             print("change_coordinate_direction 3 : cord : %s" %cord)
-            cord_area = util.get_area(cord)
+            cord_area = get_area(cord)
         if not cord_area>0:
             print("change_coordinate_direction. coordinates are STILL NOT  clockwise")
     else:
