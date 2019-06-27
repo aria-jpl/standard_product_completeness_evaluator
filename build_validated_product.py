@@ -13,7 +13,7 @@ import pickle
 import hashlib
 import dateutil
 import dateutil.parser
-from shapely.geometry import Polygon, MultiPolygon, mapping
+from shapely.geometry import shape, Polygon, MultiPolygon, mapping
 from shapely.ops import cascaded_union
 from hysds.celery import app
 from hysds.dataset_ingest import ingest
@@ -111,6 +111,7 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
+    location = shape(location)
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
     return ds
 
