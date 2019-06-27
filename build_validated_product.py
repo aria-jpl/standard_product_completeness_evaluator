@@ -146,9 +146,10 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
-    location = shape(location)
+    location2 = shape(location)
     #location = get_union_geojson_ifgs(ifg_list)
     print("location : {}".format(location))
+    print("location2 : {}".format(location2))
     location = change_coordinate_direction(location)
     print("location : {}".format(location))
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':version}
