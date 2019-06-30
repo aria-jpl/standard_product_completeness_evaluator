@@ -9,21 +9,20 @@ def validate_geojson(A):
     for i in range(len(A)):
         C = A[i]
         if C is not None:
-            print("C:%s" %type(C))
             D = check_fix(C)
-            print("new_length : %s" %len(D))
+            print("new_length : {}".format(len(D)))
             B.append(D)
     return tuple(B)
 
 
 def check_fix(C):
     n = len(C)
-    print("orig_length : %s" %n)
+    print("orig_length :{}".format(n))
     i=1
     while(i<n):
 
         if C[i]==C[i-1]:
-            print("List updated as two same consecutive points : %" %C[i])
+            print("List updated as two same consecutive points : {}".format(C[i]))
             return fix_tuple(C, i)
         i = i+1
     print("List unchanged")
@@ -53,24 +52,24 @@ def get_area(coords):
     return area / 2
 
 def change_coordinate_direction(cord):
-    print("change_coordinate_direction 1 cord: %s\n" %cord)
+    print("change_coordinate_direction 1 cord: {}\n".format(cord))
     cord_area = get_area(cord)
     if not cord_area>0:
         print("change_coordinate_direction : coordinates are not clockwise, reversing it")
         cord = [cord[::-1]]
-        print("change_coordinate_direction 2 : cord : %s" %cord)
+        print("change_coordinate_direction 2 : cord : {}".format(cord))
         try:
             cord_area = get_area(cord)
         except:
             cord = cord[0]
-            print("change_coordinate_direction 3 : cord : %s" %cord)
+            print("change_coordinate_direction 3 : cord : {}".format(cord))
             cord_area = get_area(cord)
         if not cord_area>0:
             print("change_coordinate_direction. coordinates are STILL NOT  clockwise")
     else:
         print("change_coordinate_direction: coordinates are already clockwise")
 
-    print("change_coordinate_direction 4 : cord : %s" %cord)
+    print("change_coordinate_direction 4 : cord : {}".format(cord))
     return cord
 
 def validate_geojson2(geojson):
@@ -96,7 +95,7 @@ def validate_geojson2(geojson):
 def change_union_coordinate_direction(union_geom):
     print("change_coordinate_direction")
     coordinates = union_geom["coordinates"]
-    print("Type of union polygon : %s of len %s" %(type(coordinates), len(coordinates)))
+    print("Type of union polygon : {} of len {}".format((type(coordinates), len(coordinates))))
     for i in range(len(coordinates)):
         cord = coordinates[i]
         cord_area = get_area(cord)
