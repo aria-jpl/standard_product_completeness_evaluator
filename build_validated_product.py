@@ -114,11 +114,12 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     uid = build_id(version, product_prefix, aoi, track, orbit, date_pair)
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
-    try:
-        location = util.validate_geojson(location)
-        print("location after validate_geojson: {}".format(location))
-    except Exception as err:
-        print(str(err))
+    print("location:{}".format(location))
+    print("validate geojson")
+    location = util.validate_geojson(location)
+    print("location after validate_geojson: {}".format(location))
+    #except Exception as err:
+    #    print(str(err))
     try:
         location = util.change_union_coordinate_direction(location)
         print("location after change_union_coordinate_direction: {}".format(location))
