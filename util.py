@@ -6,7 +6,10 @@ import shapely.ops
 
 def validate_geojson(coord):
     B=[]
+
+    print("validate_geojson : coord : {}".format(coord))
     for C in  coord:
+        print("validate_geojson : C : {}".format(C))
         if C is not None:
             C_updated = check_fix(C)
             print("new_length : {}".format(len(C_updated)))
