@@ -20,42 +20,7 @@ import shapely.ops
 from shapely import speedups
 from hysds.celery import app
 from hysds.dataset_ingest import ingest
-#from osgeo import ogr, osr
-
-def get_area(coords):
-    '''get area of enclosed coordinates- determines clockwise or counterclockwise order'''
-    print("get_area : coords : %s" %coords)
-    n = len(coords) # of corners
-    area = 0.0
-    for i in range(n):
-        j = (i + 1) % n
-        #print("i : %s j: %s, coords[i][1] : %s coords[j][0] : %s coords[j][1] : %s coords[i][0] : %s"  %(i, j, coords[i][1], coords[j][0], coords[j][1], coords[i][0]))
-        area += coords[i][1] * coords[j][0]
-        area -= coords[j][1] * coords[i][0]
-    #area = abs(area) / 2.0
-    return area / 2
-
-def change_coordinate_direction(cord):
-    print("change_coordinate_direction 1 cord: %s\n" %cord)
-    cord_area = get_area(cord)
-    if not cord_area>0:
-        print("change_coordinate_direction : coordinates are not clockwise, reversing it")
-        cord = [cord[::-1]]
-        print("change_coordinate_direction 2 : cord : %s" %cord)
-        try:
-            cord_area = get_area(cord)
-        except:
-            cord = cord[0]
-            print("change_coordinate_direction 3 : cord : %s" %cord)
-            cord_area = get_area(cord)
-        if not cord_area>0:
-            print("change_coordinate_direction. coordinates are STILL NOT  clockwise")
-    else:
-        print("change_coordinate_direction: coordinates are already clockwise")
-
-    print("change_coordinate_direction 4 : cord : %s" %cord)
-    return cord
-
+import util
 
 def build(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Builds and submits a aoi-track product.'''
@@ -139,46 +104,6 @@ def get_reference_time(obj):
         return date
     return obj.get('_source', {}).get('endtime', False)
 
-def validate_geojson(geojson):
-    '''validates the geojson and converts it into a shapely object. can accept strings, shapefiles & geojson dicts'''
-    if isinstance(geojson, str):
-        geojson = json.loads(geojson)
-    if isinstance(geojson, shapely.geometry.polygon.Polygon):
-        return geojson
-    if isinstance(geojson, shapely.geometry.multipolygon.MultiPolygon):
-        return geojson
-    shp = shape(geojson)
-    if shp.is_valid:
-        return shp
-    else:
-        shp = shp.buffer(0)# handle self-intersection
-        if shp.is_valid:
-            return shp
-        else:
-            print(type(geojson))
-            raise Exception('input geojson is not valid: {}'.format(explain_validity(shp)))
-
-def change_union_coordinate_direction(union_geom):
-    print("change_coordinate_direction")
-    coordinates = union_geom["coordinates"]
-    print("Type of union polygon : %s of len %s" %(type(coordinates), len(coordinates)))
-    for i in range(len(coordinates)):
-        cord = coordinates[i]
-        cord_area = get_area(cord)
-        if not cord_area>0:
-            print("change_coordinate_direction : coordinates are not clockwise, reversing it")
-            cord = [cord[::-1]]
-            print(cord)
-            cord_area = get_area(cord)
-            if not cord_area>0:
-                print("change_coordinate_direction. coordinates are STILL NOT  clockwise")
-            union_geom["coordinates"][i] = cord
-        else:
-            print("change_coordinate_direction: coordinates are already clockwise")
-
-    return union_geom
-
-
 def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     '''Generates the ds dict'''
     starttime = get_times(ifg_list, minimum = True)
@@ -190,15 +115,14 @@ def build_dataset(ifg_list, version, product_prefix, aoi, track, orbit):
     #print('uid: {}'.format(uid))
     location = get_location(ifg_list)
     try:
-        location2 = validate_geojson(location)
-        #location = get_union_geojson_ifgs(ifg_list)
-        print("location2 : {}".format(location2))
+        location = util.validate_geojson(location)
+        print("location validate_geojson: {}".format(location))
     except Exception as err:
         print(str(err))
     print("location : {}".format(location))
     try:
-        location = change_union_coordinate_direction(location)
-        print("location : {}".format(location))
+        location = util.change_union_coordinate_direction(location)
+        print("location after change_union_coordinate_direction: {}".format(location))
     except Exception as err:
         print(str(err))
 
