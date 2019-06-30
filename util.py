@@ -4,14 +4,13 @@ from shapely.ops import cascaded_union
 from shapely.validation import explain_validity
 import shapely.ops
 
-def validate_geojson(A):
+def validate_geojson(coord):
     B=[]
-    for i in range(len(A)):
-        C = A[i]
+    for C in  coord:
         if C is not None:
-            D = check_fix(C)
-            print("new_length : {}".format(len(D)))
-            B.append(D)
+            C_updated = check_fix(C)
+            print("new_length : {}".format(len(C_updated)))
+            B.append(c_updated)
     return tuple(B)
 
 
