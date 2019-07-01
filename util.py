@@ -36,14 +36,10 @@ def check_fix(C):
     return C
 
 
-
 def fix_tuple(A, i):
     B = list(A)
-    C = B[i:]
-    C.extend(B[:i])
-    print("")
-    #print(C)
-    return tuple(C)
+    del(B[i])
+    return tuple(B)
 
 def get_area(coords):
     '''get area of enclosed coordinates- determines clockwise or counterclockwise order'''
