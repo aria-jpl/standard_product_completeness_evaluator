@@ -207,7 +207,7 @@ class evaluate():
                     if hashed_gunw_dct.get(full_id_hash, False) is False:
                         complete = False
                         missing_hashes.append(full_id_hash)
-                        #print('hash: {} is missing... products are incomplete.'.format(full_id_hash))
+                        print('hash: {} is missing... products are incomplete.'.format(full_id_hash))
                         incomplete_acq_lists.append(hashed_acq_dct.get(full_id_hash))
                     else:
                         complete_acq_lists.append(hashed_acq_dct.get(full_id_hash))
@@ -351,6 +351,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     #    orbit_key = stringify_orbit(orbit_numbers)
     #    results = sort_by_orbit(results).get(orbit_key, [])
     print('found {} {} products matching query.'.format(len(results), prod_type))
+    print(results)
     return results
 
 def print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
@@ -391,6 +392,8 @@ def query_es(grq_url, es_query):
     Runs the query through Elasticsearch, iterates until
     all results are generated, & returns the compiled result
     '''
+    print("query_es query: \n{}".format(json.dumps(es_query)))
+
     if 'size' in es_query.keys():
         iterator_size = es_query['size']
     else:
