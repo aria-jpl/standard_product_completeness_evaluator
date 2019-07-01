@@ -177,7 +177,9 @@ class evaluate():
             # get all associated gunw or gunw-merged products
             gunws = get_objects(self.prod_type, track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
             # evaluate to determine which products are complete, tagging & publishing complete products
-            self.gen_completed(gunws, acq_lists, aoi)
+            completed = self.gen_completed(gunws, acq_lists, aoi)
+            if not completed:
+                raise RuntimeError("Not Completed : {}".format(self.uid))
 
     def gen_completed(self, gunws, acq_lists, aoi):
         '''determines which gunws (or gunw-merged) products are complete along track & orbit,
@@ -242,6 +244,9 @@ class evaluate():
                         gunw_list.append(hashed_gunw_dct.get(hsh))
                     print('found {} products complete over aoi: {} for track: {} and orbit: {}'.format(len(gunw_list), aoi.get('_id'), track, orbit))
                     self.tag_and_publish(gunw_list, aoi)
+                    return True
+                else:
+                    return False
 
     def tag_and_publish(self, gunws, aoi):
         '''tags each object in the input list, then publishes an appropriate
