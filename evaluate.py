@@ -354,7 +354,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     if prod_type in ["S1-GUNW-acqlist-audit_trail", "S1-GUNW-acq-list"]  and len(results)==0:
         raise RuntimeError("0 matching found for {} with full_id_hash {} in {} with query :\n{}".format(prod_type, full_id_hash, grq_url, json.dumps(grq_query)))
 
-    print(results)
+    #print(results)
     return results
 
 def print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
