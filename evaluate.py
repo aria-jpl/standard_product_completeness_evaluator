@@ -351,6 +351,9 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     #    orbit_key = stringify_orbit(orbit_numbers)
     #    results = sort_by_orbit(results).get(orbit_key, [])
     print('found {} {} products matching query.'.format(len(results), prod_type))
+    if prod_type in ["S1-GUNW-acqlist-audit_trail", "S1-GUNW-acq-list"]  and len(results)==0:
+        raise RuntimeError("0 matching found for {} with full_id_hash {} in {} with query :\n{}".format(prod_type, full_id_hash, grq_url, json.dumps(grq_query))
+
     print(results)
     return results
 
