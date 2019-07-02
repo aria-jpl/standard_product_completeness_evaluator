@@ -173,6 +173,7 @@ class evaluate():
                 print('Found {} acq-lists.'.format(len(acq_lists)))
                 continue
             #filter invalid orbits
+            print("self.orbit_number : {}".format(self.orbit_number))
             acq_lists = sort_by_orbit(acq_lists).get(stringify_orbit(self.orbit_number))
             # get all associated gunw or gunw-merged products
             gunws = get_objects(self.prod_type, track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
@@ -583,6 +584,8 @@ def resolve_orbit_field(prod_type):
 
 def stringify_orbit(orbit_list):
     '''converts the list into a string'''
+    if len(orbit_list) == 0:
+        raise RuntimeError("Orbit List is EMPTY")
     return '_'.join([str(x).zfill(3) for x in sorted(orbit_list)])
 
 def get_version(es_obj):
