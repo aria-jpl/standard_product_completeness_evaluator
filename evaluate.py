@@ -8,7 +8,7 @@ for all GUNWs along that track/orbit pairing.
 '''
 
 from __future__ import print_function
-import re
+import re, sys, os
 import json
 import hashlib
 import urllib3
