@@ -594,7 +594,8 @@ def get_version(es_obj):
 
 if __name__ == '__main__':
     
-    try: status = evaluate()
+    try: 
+        evaluate()
     except Exception as e:
         with open('_alt_error.txt', 'w') as f:
             f.write("%s\n" % str(e))
