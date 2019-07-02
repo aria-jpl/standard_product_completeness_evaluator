@@ -18,6 +18,7 @@ import dateutil
 import dateutil.parser
 from hysds.celery import app
 import tagger
+import traceback
 import build_validated_product
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
