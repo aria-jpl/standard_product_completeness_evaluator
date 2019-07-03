@@ -599,12 +599,12 @@ def get_version(es_obj):
 if __name__ == '__main__':
     
     try: 
-        status = evaluate()
+        evaluate()
     except Exception as e:
         with open('_alt_error.txt', 'w') as f:
             f.write("%s\n" % str(e))
         with open('_alt_traceback.txt', 'w') as f:
             f.write("%s\n" % traceback.format_exc())
         raise
-    sys.exit(status)
+    sys.exit(0)
 
