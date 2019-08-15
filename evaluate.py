@@ -73,11 +73,14 @@ class evaluate():
 
     def run_aoi_evaluation(self):
         '''runs the evaluation & publishing for an aoi'''
-        # retrieve all gunws, & gunw-merged products over an aoi
-        s1_gunw = get_objects('S1-GUNW', location=self.location, starttime=self.starttime, endtime=self.endtime)
-        s1_gunw_merged = get_objects('S1-GUNW-MERGED', location=self.location, starttime=self.starttime, endtime=self.endtime)
         # get all audit_trail products over the aoi
         audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
+        # determine all full_id_hashes from all audit_trail products
+        full_id_hashes = sort_by_hash(audit_trail_list).keys()
+        # retrieve associated gunws from the full_id_hash list
+        s1_gunw = get_objects('S1-GUNW', full_id_hash = full_id_hashes) 
+        # retrieve associated gunw-merged from the full_id_hash list
+        s1_gunw_merged = get_objects('S1-GUNW-MERGED', full_id_hash=full_id_hashes)
         # get all greylist hashes
         greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST', location=self.location)).keys() 
         # get the full aoi product
@@ -140,49 +143,6 @@ class evaluate():
             else:
                 # evaluate to determine which products are complete, tagging & publishing complete products
                 self.gen_completed(gunws_merged, acq_lists, aoi)
-
-
-    def run_gunw_evaluation2(self):
-        '''runs the evaluation and publishing for a gunw or gunw-merged'''
-        # fill the hash if it doesn't exist
-        if self.full_id_hash is False:
-            print('attempting to fill hash for submitted product...')
-            self.full_id_hash = gen_hash(get_objects(self.prod_type, uid=self.uid)[0])
-            print('Found hash {}'.format(self.full_id_hash))
-        # get all the greylists
-        greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys()
-        # determine which AOI(s) the gunw corresponds to
-        all_acq_list = get_objects('S1-GUNW-acqlist', full_id_hash=self.full_id_hash)
-        audit_by_aoi = sort_by_aoi(all_acq_list)
-        for aoi_id in audit_by_aoi.keys():
-            print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
-            aois = get_objects('area_of_interest', uid=aoi_id)
-            if len(aois) > 1:
-                raise Exception('unable to distinguish between multiple AOIs with same uid but different version: {}}'.format(aoi_id))
-            if len(aois) == 0:
-                warnings.warn('unable to find referenced AOI: {}'.format(aoi_id))
-                continue
-            aoi = aois[0]
-            # get all audit-trail products that match orbit and track
-            matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
-            print('Found {} audit trail products matching track: {}'.format(len(matching_audit_trail_list), self.track_number))
-            if len(matching_audit_trail_list) < 1:
-                continue
-            #get all acq-list products that match the audit trail
-            acq_lists = self.get_matching_acq_lists(aoi, matching_audit_trail_list, greylist_hashes)
-            if len(acq_lists) < 1:
-                print('Found {} acq-lists.'.format(len(acq_lists)))
-                continue
-            #filter invalid orbits
-            print("self.orbit_number : {}".format(self.orbit_number))
-            acq_lists = sort_by_orbit(acq_lists).get(stringify_orbit(self.orbit_number))
-            # get all associated gunw or gunw-merged products
-            gunws = get_objects(self.prod_type, track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.version)
-            # evaluate to determine which products are complete, tagging & publishing complete products
-            completed = self.gen_completed(gunws, acq_lists, aoi)
-            if not completed:
-                raise RuntimeError("Not Completed : {}".format(self.uid))
-    
 
     def run_gunw_evaluation(self):
         '''runs the evaluation and publishing for a gunw or gunw-merged'''
@@ -368,7 +328,10 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if endtime:
             must.append({"range": {"starttime": {"to": endtime}}})
         if full_id_hash:
-            must.append({"term": {"metadata.full_id_hash.raw": full_id_hash}})
+            if isinstance(full_id_hash, list):
+                must.append({"terms": {"metadata.full_id_hash.raw": full_id_hash}})
+            else: 
+                must.append({"term": {"metadata.full_id_hash.raw": full_id_hash}})
         if track_number:
             must.append({"term": {"metadata.track_number": track_number}})
         if version:
