@@ -76,7 +76,7 @@ class evaluate():
         # get all audit_trail products over the aoi
         audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
         # determine all full_id_hashes from all audit_trail products
-        full_id_hashes = sort_by_hash(audit_trail_list).keys()
+        full_id_hashes = list(sort_by_hash(audit_trail_list).keys())
         # retrieve associated gunws from the full_id_hash list
         s1_gunw = get_objects('S1-GUNW', full_id_hash = full_id_hashes) 
         # retrieve associated gunw-merged from the full_id_hash list
