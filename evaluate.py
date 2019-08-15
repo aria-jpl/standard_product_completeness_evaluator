@@ -78,9 +78,8 @@ class evaluate():
         # determine all full_id_hashes from all audit_trail products
         full_id_hashes = list(sort_by_hash(audit_trail_list).keys())
         # retrieve associated gunws from the full_id_hash list
-        s1_gunw = get_objects('S1-GUNW', full_id_hash = full_id_hashes) 
-        # retrieve associated gunw-merged from the full_id_hash list
-        s1_gunw_merged = get_objects('S1-GUNW-MERGED', full_id_hash=full_id_hashes)
+        s1_gunw = filter_hashes(get_objects('S1-GUNW', location=self.location, starttime=self.starttime, endtime=self.endtime), full_id_hashes)
+        s1_gunw_merged = filter_hashes(get_objects('S1-GUNW-MERGED', location=self.location, starttime=self.starttime, endtime=self.endtime), full_id_hashes)
         # get all greylist hashes
         greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST', location=self.location)).keys() 
         # get the full aoi product
@@ -131,14 +130,14 @@ class evaluate():
             acq_lists = sort_by_orbit(acq_lists).get(stringify_orbit(self.orbit_number))
             # get all associated gunw or gunw-merged products
             gunws = get_objects('S1-GUNW', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.s1_gunw_version)
-            if len(gunws)<1:
+            if len(gunws) < 1:
                 print("No S1-GUNW FOUND for track_number={}, orbit_numbers={}, s1-gunw-version={}".format(self.track_number, self.orbit_number, self.s1_gunw_version))
             else:
                 # evaluate to determine which products are complete, tagging & publishing complete products
                 self.gen_completed(gunws, acq_lists, aoi)
 
             gunws_merged = get_objects('S1-GUNW-MERGED', track_number=self.track_number, orbit_numbers=self.orbit_number, version=self.s1_gunw_merged_version)
-            if len(gunws_merged)<1:
+            if len(gunws_merged) < 1:
                 print("No S1-GUNW-MERGED FOUND for track_number={}, orbit_numbers={}, s1-gunw-version={}".format(self.track_number, self.orbit_number, self.s1_gunw_merged_version))
             else:
                 # evaluate to determine which products are complete, tagging & publishing complete products
@@ -363,7 +362,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     #    orbit_key = stringify_orbit(orbit_numbers)
     #    results = sort_by_orbit(results).get(orbit_key, [])
     print('found {} {} products matching query.'.format(len(results), prod_type))
-    if prod_type in ["S1-GUNW-acqlist-audit_trail", "S1-GUNW-acq-list"]  and len(results)==0:
+    if prod_type in ["S1-GUNW-acqlist-audit_trail", "S1-GUNW-acq-list"]  and len(results) == 0:
         raise RuntimeError("0 matching found for {} with full_id_hash {} in {} with query :\n{}".format(prod_type, full_id_hash, grq_url, json.dumps(grq_query)))
 
     #print(results)
@@ -577,6 +576,18 @@ def sort_duplicates_by_hash(es_results_list):
             sorted_dict[idhash] = result
     return sorted_dict
 
+def filter_hashes(es_results_list, full_id_hash_list):
+    '''
+    filters out objects in the es_results_list that don't contain a 
+    full_id_hash from full_id_hash_list. Returns the filtered list.
+    '''
+    filtered_list = []
+    for es_result in es_results_list:
+        hsh = get_hash(es_result)
+        if hsh in full_id_hash_list:
+            filtered_list.append(es_result)
+    return filtered_list
+
 def get_most_recent(obj1, obj2):
     '''returns the object with the most recent ingest time'''
     ctime1 = dateutil.parser.parse(obj1.get('_source', {}).get('creation_timestamp', False))
@@ -609,8 +620,7 @@ def get_version(es_obj):
     return version
 
 if __name__ == '__main__':
-    
-    try: 
+    try:
         evaluate()
     except Exception as e:
         with open('_alt_error.txt', 'w') as f:
