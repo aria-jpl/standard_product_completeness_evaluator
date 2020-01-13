@@ -332,7 +332,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
             else: 
                 must.append({"term": {"metadata.full_id_hash.raw": full_id_hash}})
         if track_number:
-            must.append({"term": {"metadata.track_number": track_number}})
+            must.append({"match_phrase": {"metadata.track_number": track_number}})
         if version:
             must.append({"term": {"version.raw": version}})
         if uid:
@@ -348,7 +348,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
                 for orbit in orbit_numbers:
                     must.append({"term":{"metadata.{}".format(orbit_term): orbit}})
         if aoi:
-            must.append({"term": {"metadata.aoi.raw": aoi}})
+            must.append({"match_phrase": {"metadata.aoi.raw": aoi}})
         filtered["filter"] = {"bool":{"must":must}}
     if location:
         grq_query = {"query": {"filtered": filtered}, "from": 0, "size": 1000}
