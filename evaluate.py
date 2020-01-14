@@ -182,7 +182,7 @@ class evaluate():
             # evaluate to determine which products are complete, tagging & publishing complete products
             completed = self.gen_completed(gunws, acq_lists, aoi)
             if not completed:
-                raise RuntimeError("Not Completed : {}".format(self.uid))
+                logger.info("Not Completed : {}".format(self.uid))
 
     def gen_completed(self, gunws, acq_lists, aoi):
         '''determines which gunws (or gunw-merged) products are complete along track & orbit,
@@ -484,13 +484,23 @@ def sort_by_aoi(es_result_list):
     #print('found {} results'.format(len(es_result_list)))
     sorted_dict = {}
     for result in es_result_list:
-        aoi_id = result.get('_source', {}).get('metadata', {}).get('aoi', False)
-        if not aoi_id:
+        aoi_ids = result.get('_source', {}).get('metadata', {}).get('aoi', False)
+        if not aoi_ids:
             continue
-        if aoi_id in sorted_dict.keys():
-            sorted_dict.get(aoi_id, []).append(result)
+
+        if isinstance(aoi_ids, list) or isinstance(aoi_ids, tuple):
+            for aoi_id in aoi_ids:
+                if aoi_id in sorted_dict.keys():
+                    sorted_dict.get(aoi_id, []).append(result)
+                else:
+                    sorted_dict[aoi_id] = [result]
+ 
         else:
-            sorted_dict[aoi_id] = [result]
+            if aoi_id in sorted_dict.keys():
+                sorted_dict.get(aoi_id, []).append(result)
+            else:
+                sorted_dict[aoi_id] = [result]
+
     print("sort_by_aoi : aois found : {}".format(sorted_dict.keys()))
     return sorted_dict
 
