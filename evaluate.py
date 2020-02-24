@@ -8,6 +8,9 @@ for all GUNWs along that track/orbit pairing.
 '''
 
 from __future__ import print_function
+from builtins import str
+from builtins import range
+from builtins import object
 import re, sys, os
 import json
 import hashlib
@@ -39,7 +42,7 @@ INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
                  'S1-GUNW-GREYLIST': 'grq_*_s1-gunw-greylist',
                  'area_of_interest': 'grq_*_area_of_interest'}
 
-class evaluate():
+class evaluate(object):
     '''evaluates input product for completeness. Tags GUNWs/GUNW-merged & publishes AOI_TRACK products'''
     def __init__(self):
         '''fill values from context, error if invalid inputs, then kickoff evaluation'''
@@ -81,7 +84,7 @@ class evaluate():
         s1_gunw = filter_hashes(get_objects('S1-GUNW', location=self.location, starttime=self.starttime, endtime=self.endtime), full_id_hashes)
         s1_gunw_merged = filter_hashes(get_objects('S1-GUNW-MERGED', location=self.location, starttime=self.starttime, endtime=self.endtime), full_id_hashes)
         # get all greylist hashes
-        greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST', location=self.location)).keys() 
+        greylist_hashes = list(sort_by_hash(get_objects('S1-GUNW-GREYLIST', location=self.location)).keys()) 
         # get the full aoi product
         aois = get_objects('area_of_interest', uid=self.uid, version=self.version)
         if len(aois) > 1:
@@ -103,11 +106,11 @@ class evaluate():
             self.full_id_hash = gen_hash(get_objects(self.prod_type, uid=self.uid)[0])
             print('Found hash {}'.format(self.full_id_hash))
         # get all the greylists
-        greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys()
+        greylist_hashes = list(sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys())
         # determine which AOI(s) the gunw corresponds to
         all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
         audit_by_aoi = sort_by_aoi(all_audit_trail)
-        for aoi_id in audit_by_aoi.keys():
+        for aoi_id in list(audit_by_aoi.keys()):
             print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
             aois = get_objects('area_of_interest', uid=aoi_id)
             if len(aois) > 1:
@@ -151,11 +154,11 @@ class evaluate():
             self.full_id_hash = gen_hash(get_objects(self.prod_type, uid=self.uid)[0])
             print('Found hash {}'.format(self.full_id_hash))
         # get all the greylists
-        greylist_hashes = sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys()
+        greylist_hashes = list(sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys())
         # determine which AOI(s) the gunw corresponds to
         all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
         audit_by_aoi = sort_by_aoi(all_audit_trail)
-        for aoi_id in audit_by_aoi.keys():
+        for aoi_id in list(audit_by_aoi.keys()):
             print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
             aois = get_objects('area_of_interest', uid=aoi_id)
             if len(aois) > 1:
@@ -191,10 +194,10 @@ class evaluate():
         hashed_acq_dct = sort_duplicates_by_hash(acq_lists)
         hashed_gunw_dct = sort_duplicates_by_hash(gunws) # iterates through the list & removes older gunws with duplicate full_id_hash
         track_dct = sort_by_track(acq_lists)
-        for track in track_dct.keys():
+        for track in list(track_dct.keys()):
             track_list = track_dct.get(track, [])
             orbit_dct = sort_by_orbit(track_list)
-            for orbit in orbit_dct.keys():
+            for orbit in list(orbit_dct.keys()):
                 print('------------------------------')
                 orbit_list = orbit_dct.get(orbit, [])
                 print('Found {} ACQ-lists over aoi: {} & track: {} & orbit: {}'.format(len(orbit_list), aoi.get('_source').get('id'), track, orbit))
@@ -408,12 +411,12 @@ def query_es(grq_url, es_query):
     '''
     print("query_es query: \n{}".format(json.dumps(es_query)))
 
-    if 'size' in es_query.keys():
+    if 'size' in list(es_query.keys()):
         iterator_size = es_query['size']
     else:
         iterator_size = 10
         es_query['size'] = iterator_size
-    if 'from' in es_query.keys():
+    if 'from' in list(es_query.keys()):
         from_position = es_query['from']
     else:
         from_position = 0
@@ -438,12 +441,12 @@ def sort_by_orbit(es_result_list):
     sorted_dict = {}
     for result in es_result_list:
         orbit = get_orbit(result)
-        if orbit in sorted_dict.keys():
+        if orbit in list(sorted_dict.keys()):
             sorted_dict[orbit].append(result)
         else:
             sorted_dict[orbit] = [result]
 
-    print("sort_by_orbit : orbits found : {}".format(sorted_dict.keys()))
+    print("sort_by_orbit : orbits found : {}".format(list(sorted_dict.keys())))
     return sorted_dict
 
 def sort_by_hash(es_results_list):
@@ -453,12 +456,12 @@ def sort_by_hash(es_results_list):
     sorted_dict = {}
     for result in es_results_list:
         idhash = get_hash(result)
-        if idhash in sorted_dict.keys():
+        if idhash in list(sorted_dict.keys()):
             sorted_dict.get(idhash, []).append(result)
         else:
             sorted_dict[idhash] = [result]
 
-    print("sort_by_hash : hash found : {}".format(sorted_dict.keys()))
+    print("sort_by_hash : hash found : {}".format(list(sorted_dict.keys())))
     return sorted_dict
 
 def sort_by_track(es_result_list):
@@ -469,12 +472,12 @@ def sort_by_track(es_result_list):
     sorted_dict = {}
     for result in es_result_list:
         track = get_track(result)
-        if track in sorted_dict.keys():
+        if track in list(sorted_dict.keys()):
             sorted_dict.get(track, []).append(result)
         else:
             sorted_dict[track] = [result]
 
-    print("sort_by_track : tracks found : {}".format(sorted_dict.keys()))
+    print("sort_by_track : tracks found : {}".format(list(sorted_dict.keys())))
     return sorted_dict
 
 def sort_by_aoi(es_result_list):
@@ -487,11 +490,11 @@ def sort_by_aoi(es_result_list):
         aoi_id = result.get('_source', {}).get('metadata', {}).get('aoi', False)
         if not aoi_id:
             continue
-        if aoi_id in sorted_dict.keys():
+        if aoi_id in list(sorted_dict.keys()):
             sorted_dict.get(aoi_id, []).append(result)
         else:
             sorted_dict[aoi_id] = [result]
-    print("sort_by_aoi : aois found : {}".format(sorted_dict.keys()))
+    print("sort_by_aoi : aois found : {}".format(list(sorted_dict.keys())))
     return sorted_dict
 
 def get_track(es_obj):
@@ -568,7 +571,7 @@ def sort_duplicates_by_hash(es_results_list):
     sorted_dict = {}
     for result in es_results_list:
         idhash = get_hash(result)
-        if idhash in sorted_dict.keys():
+        if idhash in list(sorted_dict.keys()):
             latest_result = get_most_recent(result, sorted_dict.get(idhash))
             print('found duplicate gunws: {}, {}'.format(result.get('_source').get('id'), sorted_dict.get(idhash).get('_source').get('id')))
             sorted_dict[idhash] = latest_result
