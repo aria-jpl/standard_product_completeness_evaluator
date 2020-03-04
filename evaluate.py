@@ -496,10 +496,10 @@ def sort_by_aoi(es_result_list):
                     sorted_dict[aoi_id] = [result]
  
         else:
-            if aoi_id in sorted_dict.keys():
-                sorted_dict.get(aoi_id, []).append(result)
+            if aoi_ids in sorted_dict.keys():
+                sorted_dict.get(aoi_ids, []).append(result)
             else:
-                sorted_dict[aoi_id] = [result]
+                sorted_dict[aoi_ids] = [result]
 
     print("sort_by_aoi : aois found : {}".format(sorted_dict.keys()))
     return sorted_dict
