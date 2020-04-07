@@ -5,6 +5,7 @@ Builds s1-gunw-aoi-track and s1-gunw-aoi-track-merged products
 '''
 
 from __future__ import print_function
+from builtins import str
 import os
 import json
 import pytz
