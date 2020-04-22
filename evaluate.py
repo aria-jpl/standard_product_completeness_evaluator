@@ -635,7 +635,7 @@ def get_version(es_obj):
 if __name__ == '__main__':
     try:
         evaluate()
-    except Exception as e:
+    except (Exception, SystemExit) as e:
         with open('_alt_error.txt', 'w') as f:
             f.write("%s\n" % str(e))
         with open('_alt_traceback.txt', 'w') as f:
