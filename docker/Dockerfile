@@ -1,4 +1,5 @@
-FROM hysds/pge-base:latest
+FROM hysds/pge-base:develop-es1
+
 MAINTAINER jlinick "Justin.P.Linick@jpl.nasa.gov"
 LABEL description="Standard Completeness Evaluator"
 
