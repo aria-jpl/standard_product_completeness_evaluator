@@ -3,7 +3,7 @@
 '''
 updates product grq metadata with the machine tag
 '''
-from __future__ import print_function
+
 from builtins import range
 import json
 import requests

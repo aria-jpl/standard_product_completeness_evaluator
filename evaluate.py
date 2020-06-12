@@ -7,7 +7,7 @@ products, it tags the product with <aoi_name> tag, and creates an AOI_TRACK prod
 for all GUNWs along that track/orbit pairing.
 '''
 
-from __future__ import print_function
+
 from builtins import str
 from builtins import range
 from builtins import object
@@ -493,18 +493,18 @@ def sort_by_aoi(es_result_list):
 
         if isinstance(aoi_ids, list) or isinstance(aoi_ids, tuple):
             for aoi_id in aoi_ids:
-                if aoi_id in sorted_dict.keys():
+                if aoi_id in list(sorted_dict.keys()):
                     sorted_dict.get(aoi_id, []).append(result)
                 else:
                     sorted_dict[aoi_id] = [result]
  
         else:
-            if aoi_ids in sorted_dict.keys():
+            if aoi_ids in list(sorted_dict.keys()):
                 sorted_dict.get(aoi_ids, []).append(result)
             else:
                 sorted_dict[aoi_ids] = [result]
 
-    print("sort_by_aoi : aois found : {}".format(sorted_dict.keys()))
+    print("sort_by_aoi : aois found : {}".format(list(sorted_dict.keys())))
     return sorted_dict
 
 def get_track(es_obj):
