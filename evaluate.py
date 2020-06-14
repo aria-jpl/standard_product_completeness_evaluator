@@ -185,7 +185,7 @@ class evaluate(object):
             # evaluate to determine which products are complete, tagging & publishing complete products
             completed = self.gen_completed(gunws, acq_lists, aoi)
             if not completed:
-                logger.info("Not Completed : {}".format(self.uid))
+                print("Not Completed : {}".format(self.uid))
 
     def gen_completed(self, gunws, acq_lists, aoi):
         '''determines which gunws (or gunw-merged) products are complete along track & orbit,
