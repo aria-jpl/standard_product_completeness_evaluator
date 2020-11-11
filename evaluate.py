@@ -56,7 +56,10 @@ class evaluate(object):
         self.endtime = self.ctx.get('endtime', False)
         self.version = self.ctx.get('version', False)
         self.orbit_number = self.ctx.get('orbit_number', False)
-        self.s1_gunw_version = self.ctx.get("S1-GUNW-version", S1_GUNW_VERSION)
+        self.s1_gunw_version = self.ctx.get("S1-GUNW-version", S1_GUNW_VERSION)[:2]
+        #mlucas
+        print(self.s1_gunw_version)
+
         self.s1_gunw_merged_version = self.ctx.get("S1-GUNW-MERGED-version", S1_GUNW_MERGED_VERSION)
 
         # exit if invalid input product type
@@ -337,7 +340,10 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
         if track_number:
             must.append({"match_phrase": {"metadata.track_number": track_number}})
         if version:
-            must.append({"term": {"version.raw": version}})
+            print("mlucas")
+            version = version + ".*.*"
+            must.append({"wildcard": {"version.raw": version}})
+            #must.append({"term": {"version.raw": version}})
         if uid:
             must.append({"term": {"id.raw": uid}})
         if orbit_numbers:
