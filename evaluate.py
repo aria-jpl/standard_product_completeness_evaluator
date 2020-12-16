@@ -40,6 +40,8 @@ INDEX_MAPPING = {'S1-GUNW-acq-list': 'grq_*_s1-gunw-acq-list',
                  'S1-GUNW-AOI_TRACK': 'grq_*_s1-gunw-aoi_track',
                  'S1-GUNW-MERGED-AOI_TRACK': 'grq_*_s1-gunw-merged-aoi_track',
                  'S1-GUNW-GREYLIST': 'grq_*_s1-gunw-greylist',
+                 'runconfig-acq-list': 'grq_*_runconfig-acq-list',
+                 'runconfig-acqlist-audit_trail': 'grq_v2.0.0_runconfig-acqlist-audit_trail',
                  'area_of_interest': 'grq_*_area_of_interest'}
 
 class evaluate(object):
@@ -78,7 +80,7 @@ class evaluate(object):
     def run_aoi_evaluation(self):
         '''runs the evaluation & publishing for an aoi'''
         # get all audit_trail products over the aoi
-        audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', aoi=self.uid)
+        audit_trail_list = get_objects_all('S1-GUNW-acqlist-audit_trail,runconfig-acqlist-audit_trail', aoi=self.uid)
         # determine all full_id_hashes from all audit_trail products
         full_id_hashes = list(sort_by_hash(audit_trail_list).keys())
         # retrieve associated gunws from the full_id_hash list
@@ -109,7 +111,7 @@ class evaluate(object):
         # get all the greylists
         greylist_hashes = list(sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys())
         # determine which AOI(s) the gunw corresponds to
-        all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
+        all_audit_trail = get_objects_all('S1-GUNW-acqlist-audit_trail,runconfig-acqlist-audit_trail', full_id_hash=self.full_id_hash)
         audit_by_aoi = sort_by_aoi(all_audit_trail)
         for aoi_id in list(audit_by_aoi.keys()):
             print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
@@ -121,7 +123,7 @@ class evaluate(object):
                 continue
             aoi = aois[0]
             # get all audit-trail products that match orbit and track
-            matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
+            matching_audit_trail_list = get_objects_all('S1-GUNW-acqlist-audit_trail,runconfig-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
             print('Found {} audit trail products matching track: {}'.format(len(matching_audit_trail_list), self.track_number))
             if len(matching_audit_trail_list) < 1:
                 continue
@@ -157,7 +159,7 @@ class evaluate(object):
         # get all the greylists
         greylist_hashes = list(sort_by_hash(get_objects('S1-GUNW-GREYLIST')).keys())
         # determine which AOI(s) the gunw corresponds to
-        all_audit_trail = get_objects('S1-GUNW-acqlist-audit_trail', full_id_hash=self.full_id_hash)
+        all_audit_trail = get_objects_all('S1-GUNW-acqlist-audit_trail,runconfig-acqlist-audit_trail', full_id_hash=self.full_id_hash)
         audit_by_aoi = sort_by_aoi(all_audit_trail)
         for aoi_id in list(audit_by_aoi.keys()):
             print('Evaluating associated GUNWs over AOI: {}'.format(aoi_id))
@@ -169,7 +171,7 @@ class evaluate(object):
                 continue
             aoi = aois[0]
             # get all audit-trail products that match orbit and track
-            matching_audit_trail_list = get_objects('S1-GUNW-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
+            matching_audit_trail_list = get_objects_all('S1-GUNW-acqlist-audit_trail,runconfig-acqlist-audit_trail', track_number=self.track_number, aoi=aoi_id)
             print('Found {} audit trail products matching track: {}'.format(len(matching_audit_trail_list), self.track_number))
             if len(matching_audit_trail_list) < 1:
                 continue
@@ -294,7 +296,7 @@ class evaluate(object):
         location = aoi.get('_source', {}).get('location', False)
         audit_dct = sort_by_hash(audit_trail_list)
         matching = []
-        all_acq_lists = get_objects('S1-GUNW-acq-list', starttime=start, endtime=end, location=location)
+        all_acq_lists = get_objects_all('S1-GUNW-acq-list,runconfig-acq-list', starttime=start, endtime=end, location=location)
         for acq_list in all_acq_lists:
             hsh = get_hash(acq_list)
             if audit_dct.get(hsh, False) and hsh not in greylist_hashes:
@@ -313,6 +315,25 @@ class evaluate(object):
             return True
         return False
 
+def get_objects_all(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
+    prod_types = prod_type.split(',')
+    prod_types = [i.strip() for i in prod_types]
+    acq_list_trails_prod_types = ["S1-GUNW-acqlist-audit_trail", "runconfig-acqlist-audit_trail", "S1-GUNW-acq-list", "runconfig-acq-list"]
+
+    total_results = []
+    for p_type in prod_types:
+        results = get_objects(p_type, location, starttime, endtime, full_id_hash, track_number, orbit_numbers, version, uid, aoi)
+        print('found {} {} products matching query.'.format(len(results), p_type))
+        if len(results)>0:
+            total_results.extend(results)
+
+    if set(prod_types) <= set(acq_list_trails_prod_types) and len(total_results) == 0:
+        raise RuntimeError("0 matching found for {} with full_id_hash {}".format(prod_type, full_id_hash))
+
+    #print(results)
+    return results
+    
+    
 def get_objects(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
     '''returns all objects of the object type that intersect both
     temporally and spatially with the aoi'''
@@ -367,16 +388,14 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
     #if orbit_numbers:
     #    orbit_key = stringify_orbit(orbit_numbers)
     #    results = sort_by_orbit(results).get(orbit_key, [])
-    print('found {} {} products matching query.'.format(len(results), prod_type))
-    if prod_type in ["S1-GUNW-acqlist-audit_trail", "S1-GUNW-acq-list"]  and len(results) == 0:
-        raise RuntimeError("0 matching found for {} with full_id_hash {} in {} with query :\n{}".format(prod_type, full_id_hash, grq_url, json.dumps(grq_query)))
-
+    print('found {} {} products matching query :\n {}.'.format(len(results), prod_type, json.dumps(grq_query)))
     #print(results)
     return results
 
 def print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
     '''print statement describing grq query'''
-    statement = 'Querying for products of type: {}'.format(prod_type)
+    prod_types = prod_type.split(',')
+    statement = 'Querying for products of type: {}'.format(prod_types)
     if location:
         statement += '\nwith location:     {}'.format(location)
     if starttime:
@@ -645,4 +664,3 @@ if __name__ == '__main__':
             f.write("%s\n" % traceback.format_exc())
         raise
     sys.exit(0)
-
