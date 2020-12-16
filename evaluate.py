@@ -394,8 +394,7 @@ def get_objects(prod_type, location=False, starttime=False, endtime=False, full_
 
 def print_query(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
     '''print statement describing grq query'''
-    prod_types = prod_type.split(',')
-    statement = 'Querying for products of type: {}'.format(prod_types)
+    statement = 'Querying for products of type: {}'.format(prod_type)
     if location:
         statement += '\nwith location:     {}'.format(location)
     if starttime:
