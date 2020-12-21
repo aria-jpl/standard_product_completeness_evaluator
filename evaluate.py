@@ -331,7 +331,7 @@ def get_objects_all(prod_type, location=False, starttime=False, endtime=False, f
         raise RuntimeError("0 matching found for {} with full_id_hash {}".format(prod_type, full_id_hash))
 
     #print(results)
-    return results
+    return total_results
     
     
 def get_objects(prod_type, location=False, starttime=False, endtime=False, full_id_hash=False, track_number=False, orbit_numbers=False, version=False, uid=False, aoi=False):
