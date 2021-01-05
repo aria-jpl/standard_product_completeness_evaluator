@@ -331,6 +331,13 @@ def get_objects_all(prod_type, location=False, starttime=False, endtime=False, f
         raise RuntimeError("0 matching found for {} with full_id_hash {}".format(prod_type, full_id_hash))
 
     #print(results)
+    '''
+    res = []
+    [res.append(x) for x in total_results if x not in res]
+    #total_results = list(set(total_results))
+    print(res)
+    return res
+    '''
     return total_results
     
     
@@ -562,6 +569,11 @@ def get_orbit(es_obj):
             return stringify_orbit(orbit)
     raise Exception('unable to find orbit for: {}'.format(es_obj.get('_id', '')))
 
+def remove_local(s, suffix):
+    if suffix and s.endswith(suffix):
+        return s[:-len(suffix)]
+    return s
+
 def get_hash(es_obj):
     '''retrieves the full_id_hash. if it doesn't exists, it
         attempts to generate one'''
@@ -580,6 +592,7 @@ def gen_hash(es_obj):
     for slc in sorted(master_slcs):
         if isinstance(slc, tuple) or isinstance(slc, list):
             slc = slc[0]
+        slc = remove_local(slc, "-local")
         if master_ids_str == "":
             master_ids_str = slc
         else:
@@ -587,6 +600,7 @@ def gen_hash(es_obj):
     for slc in sorted(slave_slcs):
         if isinstance(slc, tuple) or isinstance(slc, list):
             slc = slc[0]
+        slc = remove_local(slc, "-local")
         if slave_ids_str == "":
             slave_ids_str = slc
         else:
