@@ -5,7 +5,7 @@
     "$HOME/.aws": "/home/ops/.aws"
   },
   "disk_usage":"2GB",
-  "recommended-queues": ["factotum-job_worker-large"],
+  "recommended-queues": ["factotum-job_worker-standard_product-completeness_evaluator", "factotum-job_worker-large"],
   "soft_time_limit": 2000,
   "time_limit": 2800,
   "params" : [
